@@ -1,20 +1,26 @@
-import type { DeepImmutable, Flatten, FloatArray, Length } from "../types";
-
+import type { DeepImmutable, Flatten, FloatArray, Length, Tuple } from "../types";
 /**
  * Computes the tensor dimension of a multi-dimensional array
  */
 export type Dimension<T> = T extends Array<infer U> ? [Length<T>, ...Dimension<U>] : T extends readonly [infer U, ...infer R] ? [Length<T>, ...Dimension<U>] : [];
 
 /**
+ * Possible values for a Tensor
+ */
+export type TensorValue = number[] | TensorValue[];
+
+/**
  * Extracts the value type of a Tensor
  */
-export type TensorValue<T> = T extends Tensor<infer V> ? V : never;
+export type ValueOfTensor<T = unknown> = T extends Tensor<infer V> ? V : TensorValue;
+
+type TensorNumberArray<V extends TensorValue> = Length<Dimension<V>> extends 2 ? Tuple<number, 16> : V;
 
 /**
  * Describes a mathematical tensor.
  * @see https://wikipedia.org/wiki/Tensor
  */
-export interface Tensor<V extends unknown[] = unknown[]> {
+export interface Tensor<V extends TensorValue = TensorValue> {
     /**
      * An array of the size of each dimension.
      * For example, [3] for a Vector3 and [4,4] for a Matrix
@@ -57,13 +63,13 @@ export interface Tensor<V extends unknown[] = unknown[]> {
      * @param index defines the offset in the destination array
      * @returns the current instance
      */
-    fromArray(array: FloatArray, index?: number): this;
+    fromArray(array: DeepImmutable<FloatArray>, index?: number): this;
 
     /**
      * Copy the current instance to an array
      * @returns a new array with the instance coordinates.
      */
-    asArray(): Flatten<V>;
+    asArray(): TensorNumberArray<V>;
 
     /**
      * Sets the current instance coordinates with the given source coordinates
@@ -77,13 +83,13 @@ export interface Tensor<V extends unknown[] = unknown[]> {
      * @returns the current updated instance
      */
 
-    copyFromFloats(...floats: Flatten<V>): this;
+    copyFromFloats(...floats: TensorNumberArray<V>): this;
 
     /**
      * Sets the instance coordinates with the given floats
      * @returns the current updated instance
      */
-    set(...values: Flatten<V>): this;
+    set(...values: TensorNumberArray<V>): this;
 
     /**
      * Sets the instance coordinates to the given value
@@ -118,7 +124,7 @@ export interface Tensor<V extends unknown[] = unknown[]> {
      * @param floats the floats to add
      * @returns the current updated instance
      */
-    addInPlaceFromFloats(...floats: Flatten<V>): this;
+    addInPlaceFromFloats(...floats: TensorNumberArray<V>): this;
 
     /**
      * Returns a new instance set with the subtracted coordinates of other's coordinates from the current coordinates.
@@ -147,7 +153,7 @@ export interface Tensor<V extends unknown[] = unknown[]> {
      * @param floats the coordinates to subtract
      * @returns the resulting instance
      */
-    subtractFromFloats(...floats: Flatten<V>): this;
+    subtractFromFloats(...floats: TensorNumberArray<V>): this;
 
     /**
      * Subtracts the given floats from the current instance coordinates and set the given instance "result" with this result
@@ -155,7 +161,7 @@ export interface Tensor<V extends unknown[] = unknown[]> {
      * @param args the coordinates to subtract with the last element as the result
      * @returns the result
      */
-    subtractFromFloatsToRef(...args: [...Flatten<V>, this]): this;
+    subtractFromFloatsToRef(...args: [...TensorNumberArray<V>, this]): this;
 
     /**
      * Returns a new instance set with the multiplication of the current instance and the given one coordinates
@@ -183,7 +189,7 @@ export interface Tensor<V extends unknown[] = unknown[]> {
      * Gets a new instance set with the instance coordinates multiplied by the given floats
      * @returns a new instance
      */
-    multiplyByFloats(...floats: Flatten<V>): this;
+    multiplyByFloats(...floats: TensorNumberArray<V>): this;
 
     /**
      * Returns a new instance set with the instance coordinates divided by the given one coordinates
@@ -219,7 +225,7 @@ export interface Tensor<V extends unknown[] = unknown[]> {
      * @param floats defines the floats to compare against
      * @returns this current updated instance
      */
-    minimizeInPlaceFromFloats(...floats: Flatten<V>): this;
+    minimizeInPlaceFromFloats(...floats: TensorNumberArray<V>): this;
 
     /**
      * Updates the current instance with the maximal coordinate values between its and the given instance ones.
@@ -233,7 +239,7 @@ export interface Tensor<V extends unknown[] = unknown[]> {
      * @param floats defines the floats to compare against
      * @returns this current updated instance
      */
-    maximizeInPlaceFromFloats(...floats: Flatten<V>): this;
+    maximizeInPlaceFromFloats(...floats: TensorNumberArray<V>): this;
 
     /**
      * Gets a new instance with current instance negated coordinates
@@ -304,7 +310,7 @@ export interface Tensor<V extends unknown[] = unknown[]> {
      * @param floats defines the coordinates to compare against
      * @returns true if both instances are equal
      */
-    equalsToFloats(...floats: Flatten<V>): boolean;
+    equalsToFloats(...floats: TensorNumberArray<V>): boolean;
 
     /**
      * Gets a new instance from current instance floored values
@@ -345,11 +351,11 @@ export interface Tensor<V extends unknown[] = unknown[]> {
 /**
  * Static side of Tensor
  */
-export interface TensorStatic<T extends Tensor> {
+export interface TensorStatic<T extends Tensor<any[]>> {
     /**
      * Creates a new instance from the given coordinates
      */
-    new (...coords: Flatten<TensorValue<T>>): T;
+    new (...coords: Flatten<ValueOfTensor<T>>): T;
 
     /**
      * So [[static]].prototype has typings, instead of just any
@@ -379,7 +385,7 @@ export interface TensorStatic<T extends Tensor> {
      * @param offset defines the offset in the data source
      * @returns a new instance
      */
-    FromArray(array: ArrayLike<number>, offset?: number): T;
+    FromArray(array: DeepImmutable<FloatArray>, offset?: number): T;
 
     /**
      * Sets "result" from the given index element of the given array
@@ -388,13 +394,13 @@ export interface TensorStatic<T extends Tensor> {
      * @param result defines the target instance
      * @returns result input
      */
-    FromArrayToRef(array: ArrayLike<number>, offset: number, result: T): T;
+    FromArrayToRef(array: DeepImmutable<FloatArray>, offset: number, result: T): T;
 
     /**
      * Sets the given instance "result" with the given floats.
      * @param args defines the coordinates of the source with the last paramater being the result
      */
-    FromFloatsToRef(...args: [...Flatten<TensorValue<T>>, T]): T;
+    FromFloatsToRef(...args: [...Flatten<ValueOfTensor<T>>, T]): T;
 
     /**
      * Gets the dot product of the instance "left" and the instance "right"

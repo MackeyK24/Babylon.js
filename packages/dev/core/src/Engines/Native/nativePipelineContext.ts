@@ -4,6 +4,7 @@ import type { IMatrixLike, IVector2Like, IVector3Like, IVector4Like, IColor3Like
 import type { IPipelineContext } from "../IPipelineContext";
 import type { NativeEngine } from "../nativeEngine";
 import type { NativeProgram } from "./nativeInterfaces";
+import type { AbstractEngine } from "../abstractEngine";
 
 export class NativePipelineContext implements IPipelineContext {
     public isCompiled: boolean = false;
@@ -77,6 +78,10 @@ export class NativePipelineContext implements IPipelineContext {
         });
 
         attributes.push(...engine.getAttributes(this, attributesNames));
+    }
+
+    public setEngine(engine: AbstractEngine): void {
+        this._engine = engine as NativeEngine;
     }
 
     /**
@@ -488,7 +493,7 @@ export class NativePipelineContext implements IPipelineContext {
      */
     public setMatrix(uniformName: string, matrix: IMatrixLike): void {
         if (this._cacheMatrix(uniformName, matrix)) {
-            if (!this._engine.setMatrices(this._uniforms[uniformName]!, matrix.asArray() as Float32Array)) {
+            if (!this._engine.setMatrices(this._uniforms[uniformName]!, matrix.asArray())) {
                 this._valueCache[uniformName] = null;
             }
         }
