@@ -8,6 +8,8 @@ export * from "./focusableButton";
 export * from "./focusableControl";
 export * from "./grid";
 export * from "./image";
+export * from "./imagePanel";
+
 export * from "./inputText";
 export * from "./inputTextArea";
 export * from "./inputPassword";
