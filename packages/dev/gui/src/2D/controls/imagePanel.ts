@@ -1,6 +1,4 @@
-import type { Nullable } from "core/types";
 import { Observable } from "core/Misc/observable";
-import { Tools } from "core/Misc/tools";
 import { Container } from "./container";
 import type { Measure } from "../measure";
 import { RegisterClass } from "core/Misc/typeStore";
@@ -341,7 +339,7 @@ export class ImagePanel extends Container {
         return "ImagePanel";
     }
 
-    public override synchronizeSizeWithContent() {
+    public synchronizeSizeWithContent() {
         if (!this._loaded || !this._domImage) {
             return;
         }
