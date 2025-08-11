@@ -1,4 +1,4 @@
-# Custom GUI Control example: ImagePanel (external)
+# Custom GUI Control example: ImageContainer (external)
 
 This document shows how to implement a custom GUI control that draws an image (including 9-slice) while supporting children, without modifying Babylon.js source. It also shows how to make it work with JSON and XML parsing.
 
@@ -13,7 +13,7 @@ import type { ICanvasRenderingContext } from "@babylonjs/core/Engines/ICanvas";
 import { RegisterClass } from "@babylonjs/core/Misc/typeStore";
 import { serialize } from "@babylonjs/core/Misc/decorators";
 
-export class ImagePanel extends Container {
+export class ImageContainer extends Container {
     private _img: HTMLImageElement | null = null;
     private _loaded = false;
 
@@ -24,8 +24,8 @@ export class ImagePanel extends Container {
     @serialize() public sliceTop: number = 0;
     @serialize() public sliceBottom: number = 0;
 
-    public override _getTypeName() {
-        return "ImagePanel";
+    public override_getTypeName() {
+        return "ImageContainer";
     }
 
     public setSource(url: string) {
@@ -104,13 +104,13 @@ export class ImagePanel extends Container {
     }
 }
 
-RegisterClass("BABYLON.GUI.ImagePanel", ImagePanel);
+RegisterClass("BABYLON.GUI.ImageContainer", ImageContainer);
 ```
 
 Usage with JSON (AdvancedDynamicTexture.parseSerializedObject):
 ```json
 {
-  "className": "ImagePanel",
+  "className": "ImageContainer",
   "name": "panelA",
   "source": "textures/panel.png",
   "stretch": 4,
@@ -126,9 +126,9 @@ Usage with JSON (AdvancedDynamicTexture.parseSerializedObject):
 
 Usage with XML (XmlLoader):
 ```xml
-<ImagePanel id="panelA" source="textures/panel.png" stretch="4" sliceLeft="16" sliceRight="48" sliceTop="16" sliceBottom="48">
+<ImageContainer id="panelA" source="textures/panel.png" stretch="4" sliceLeft="16" sliceRight="48" sliceTop="16" sliceBottom="48">
   <TextBlock id="title" text="Hello" color="white"/>
-</ImagePanel>
+</ImageContainer>
 ```
 
 Notes:
