@@ -2,7 +2,7 @@ import type { Nullable } from "core/types";
 import { Observable } from "core/Misc/observable";
 import { Tools } from "core/Misc/tools";
 
-import { Control } from "./control";
+import { Container } from "./container";
 import type { Measure } from "../measure";
 import { RegisterClass } from "core/Misc/typeStore";
 import { serialize } from "core/Misc/decorators";
@@ -12,7 +12,7 @@ import { EngineStore } from "core/Engines/engineStore";
 /**
  * Class used to create 2D images
  */
-export class Image extends Control {
+export class Image extends Container {
     /**
      *  Specifies an alternate text for the image, if the image for some reason cannot be displayed.
      */
@@ -955,7 +955,7 @@ export class Image extends Control {
         workingCanvasContext.restore();
     }
 
-    public override _draw(context: ICanvasRenderingContext): void {
+    public override _localDraw(context: ICanvasRenderingContext): void {
         context.save();
 
         if (this.shadowBlur || this.shadowOffsetX || this.shadowOffsetY) {
