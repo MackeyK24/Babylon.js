@@ -82,7 +82,10 @@ export class Image extends Container {
     }
 
     public override isReady(): boolean {
-        return this.isLoaded;
+        if (!this.isLoaded) {
+            return false;
+        }
+        return super.isReady();
     }
 
     /**
