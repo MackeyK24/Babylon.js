@@ -78,7 +78,7 @@ if (typeof (global as any).document === "undefined") {
             createRadialGradient() {
                 return { addColorStop() {} };
             },
-        } as any);
+        }) as any;
 
     (global as any).document = {
         createElement: (tag: string) => {
@@ -111,7 +111,7 @@ if (typeof (global as any).document === "undefined") {
                     get src() {
                         return _src;
                     },
-                    crossOrigin: (null as any),
+                    crossOrigin: null as any,
                     style: {},
                     width: 0,
                     height: 0,
