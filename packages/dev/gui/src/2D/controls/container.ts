@@ -720,18 +720,29 @@ export class Container extends Control {
         super._parseFromContent(serializedObject, host, urlRewriter);
         this._link(host);
 
-        // Gradient
-        if (serializedObject.backgroundGradient) {
+        if (serializedObject && serializedObject.backgroundGradient) {
             const className = Tools.Instantiate("BABYLON.GUI." + serializedObject.backgroundGradient.className);
             this._backgroundGradient = new className();
             this._backgroundGradient?.parse(serializedObject.backgroundGradient);
         }
+
+        try {
+            const count = Array.isArray(serializedObject?.children) ? serializedObject.children.length : 0;
+            // eslint-disable-next-line @typescript-eslint/no-var-requires
+            const { Logger } = require("../../../core/src/Misc/logger");
+            Logger.Log(`GUI.Container._parseFromContent: ${this.getClassName?.() ?? "Container"} children=${count}`);
+        } catch {}
 
         if (!serializedObject.children) {
             return;
         }
 
         for (const childData of serializedObject.children) {
+            try {
+                // eslint-disable-next-line @typescript-eslint/no-var-requires
+                const { Logger } = require("../../../core/src/Misc/logger");
+                Logger.Log(`GUI.Container._parseFromContent: parsing child class=${childData?.className}`);
+            } catch {}
             this.addControl(Control.Parse(childData, host, urlRewriter));
         }
     }

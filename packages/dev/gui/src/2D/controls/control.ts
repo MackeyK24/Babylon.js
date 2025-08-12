@@ -2845,11 +2845,29 @@ export class Control implements IAnimatable, IFocusableControl {
      * @returns a new Control
      */
     public static Parse(serializedObject: any, host: AdvancedDynamicTexture, urlRewriter?: (url: string) => string): Control {
-        const controlType = Tools.Instantiate("BABYLON.GUI." + serializedObject.className);
+        let controlType: any;
+        try {
+            controlType = Tools.Instantiate("BABYLON.GUI." + serializedObject.className);
+            // eslint-disable-next-line @typescript-eslint/no-var-requires
+            const { Logger } = require("../../../core/src/Misc/logger");
+            Logger.Log(`GUI.Control.Parse: instantiate ${serializedObject.className} => ${!!controlType}`);
+        } catch {
+            try {
+                // eslint-disable-next-line @typescript-eslint/no-var-requires
+                const { Logger } = require("../../../core/src/Misc/logger");
+                Logger.Warn?.(`GUI.Control.Parse: instantiate failed for ${serializedObject?.className}`);
+            } catch {}
+        }
         const control = SerializationHelper.Parse(
             () => {
                 const newControl = new controlType() as Control;
                 newControl._urlRewriter = urlRewriter;
+                try {
+                    // eslint-disable-next-line @typescript-eslint/no-var-requires
+                    const { Logger } = require("../../../core/src/Misc/logger");
+                    const name = (serializedObject && serializedObject.name) || "";
+                    Logger.Log(`GUI.Control.Parse: created ${serializedObject.className} name=${name}`);
+                } catch {}
                 return newControl;
             },
             serializedObject,

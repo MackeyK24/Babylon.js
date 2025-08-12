@@ -3,6 +3,7 @@ import "./controls/image";
 import type { Nullable } from "core/types";
 import type { Observer } from "core/Misc/observable";
 import { Observable } from "core/Misc/observable";
+import { Logger } from "core/Misc/logger";
 import type { Matrix } from "core/Maths/math.vector";
 import { Vector2, Vector3, TmpVectors } from "core/Maths/math.vector";
 import { Tools } from "core/Misc/tools";
@@ -1431,6 +1432,10 @@ export class AdvancedDynamicTexture extends DynamicTexture {
      * @param urlRewriter defines an url rewriter to update urls before sending them to the controls
      */
     public parseSerializedObject(serializedObject: any, scaleToSize?: boolean, urlRewriter?: (url: string) => string) {
+        try {
+            const rootClass = serializedObject?.root?.className;
+            Logger.Log(`GUI.parseSerializedObject: root class=${rootClass}`);
+        } catch {}
         this._rootContainer = Control.Parse(serializedObject.root, this, urlRewriter) as Container;
         if (scaleToSize) {
             const width = serializedObject.width;
