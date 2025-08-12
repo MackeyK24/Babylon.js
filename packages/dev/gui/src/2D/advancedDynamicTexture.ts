@@ -1,4 +1,4 @@
-import "./controls/index";
+import "./controls/image";
 
 import type { Nullable } from "core/types";
 import type { Observer } from "core/Misc/observable";
