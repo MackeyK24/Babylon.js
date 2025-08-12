@@ -2,7 +2,7 @@ import type { Nullable } from "core/types";
 import { Observable } from "core/Misc/observable";
 import { Tools } from "core/Misc/tools";
 
-import { Control } from "./control";
+import { Container } from "./container";
 import type { Measure } from "../measure";
 import { RegisterClass } from "core/Misc/typeStore";
 import { serialize } from "core/Misc/decorators";
@@ -12,7 +12,7 @@ import { EngineStore } from "core/Engines/engineStore";
 /**
  * Class used to create 2D images
  */
-export class Image extends Control {
+export class Image extends Container {
     /**
      *  Specifies an alternate text for the image, if the image for some reason cannot be displayed.
      */
@@ -82,7 +82,10 @@ export class Image extends Control {
     }
 
     public override isReady(): boolean {
-        return this.isLoaded;
+        if (!this.isLoaded) {
+            return false;
+        }
+        return super.isReady();
     }
 
     /**
@@ -831,6 +834,7 @@ export class Image extends Control {
         url: Nullable<string> = null
     ) {
         super(name);
+        this.clipChildren = true;
         this.source = url;
     }
 
@@ -955,65 +959,95 @@ export class Image extends Control {
         workingCanvasContext.restore();
     }
 
-    public override _draw(context: ICanvasRenderingContext): void {
-        context.save();
-
-        if (this.shadowBlur || this.shadowOffsetX || this.shadowOffsetY) {
-            context.shadowColor = this.shadowColor;
-            context.shadowBlur = this.shadowBlur;
-            context.shadowOffsetX = this.shadowOffsetX;
-            context.shadowOffsetY = this.shadowOffsetY;
-        }
-
-        let x, y, width, height;
-        if (this.cellId == -1) {
-            x = this._sourceLeft;
-            y = this._sourceTop;
-
-            width = this._sourceWidth ? this._sourceWidth : this._imageWidth;
-            height = this._sourceHeight ? this._sourceHeight : this._imageHeight;
-        } else {
-            const rowCount = this._domImage.naturalWidth / this.cellWidth;
-            const column = (this.cellId / rowCount) >> 0;
-            const row = this.cellId % rowCount;
-
-            x = this.cellWidth * row;
-            y = this.cellHeight * column;
-            width = this.cellWidth;
-            height = this.cellHeight;
+    protected override _localDraw(context: ICanvasRenderingContext): void {
+        if (!this._loaded) {
+            return;
         }
 
         this._prepareWorkingCanvasForOpaqueDetection();
 
-        this._applyStates(context);
-        if (this._loaded) {
-            switch (this._stretch) {
-                case Image.STRETCH_NONE:
-                    this._drawImage(context, x, y, width, height, this._currentMeasure.left, this._currentMeasure.top, this._currentMeasure.width, this._currentMeasure.height);
-                    break;
-                case Image.STRETCH_FILL:
-                    this._drawImage(context, x, y, width, height, this._currentMeasure.left, this._currentMeasure.top, this._currentMeasure.width, this._currentMeasure.height);
-                    break;
-                case Image.STRETCH_UNIFORM: {
-                    const hRatio = this._currentMeasure.width / width;
-                    const vRatio = this._currentMeasure.height / height;
-                    const ratio = Math.min(hRatio, vRatio);
-                    const centerX = (this._currentMeasure.width - width * ratio) / 2;
-                    const centerY = (this._currentMeasure.height - height * ratio) / 2;
+        let sx = this._sourceLeft;
+        let sy = this._sourceTop;
+        let sWidth = this._sourceWidth ? this._sourceWidth : this._imageWidth;
+        let sHeight = this._sourceHeight ? this._sourceHeight : this._imageHeight;
 
-                    this._drawImage(context, x, y, width, height, this._currentMeasure.left + centerX, this._currentMeasure.top + centerY, width * ratio, height * ratio);
-                    break;
-                }
-                case Image.STRETCH_EXTEND:
-                    this._drawImage(context, x, y, width, height, this._currentMeasure.left, this._currentMeasure.top, this._currentMeasure.width, this._currentMeasure.height);
-                    break;
-                case Image.STRETCH_NINE_PATCH:
-                    this._renderNinePatch(context, x, y, width, height);
-                    break;
-            }
+        if (this.cellId !== -1) {
+            const rowCount = this._domImage.naturalWidth / this.cellWidth;
+            const column = (this.cellId / rowCount) >> 0;
+            const row = this.cellId % rowCount;
+
+            sx = this.cellWidth * row;
+            sy = this.cellHeight * column;
+            sWidth = this.cellWidth;
+            sHeight = this.cellHeight;
         }
 
-        context.restore();
+        const dw = this._currentMeasure.width;
+        const dh = this._currentMeasure.height;
+
+        const x = this._currentMeasure.left;
+        const y = this._currentMeasure.top;
+
+        if (this._stretch === Image.STRETCH_NINE_PATCH) {
+            this._renderNinePatch(context, sx, sy, sWidth, sHeight);
+            return;
+        }
+
+        if (this.shadowBlur || this.shadowOffsetX || this.shadowOffsetY) {
+            context.save();
+            context.shadowColor = this.shadowColor;
+            context.shadowBlur = this.shadowBlur;
+            context.shadowOffsetX = this.shadowOffsetX;
+            context.shadowOffsetY = this.shadowOffsetY;
+            if (this._stretch === Image.STRETCH_NONE) {
+                this._drawImage(context, sx, sy, sWidth, sHeight, x, y, sWidth, sHeight);
+            } else if (this._stretch === Image.STRETCH_FILL) {
+                this._drawImage(context, sx, sy, sWidth, sHeight, x, y, dw, dh);
+            } else if (this._stretch === Image.STRETCH_UNIFORM) {
+                const hr = dw / sWidth;
+                const vr = dh / sHeight;
+                const r = Math.min(hr, vr);
+                const w = sWidth * r;
+                const h = sHeight * r;
+                const offsetX = (dw - w) / 2;
+                const offsetY = (dh - h) / 2;
+                this._drawImage(context, sx, sy, sWidth, sHeight, x + offsetX, y + offsetY, w, h);
+            } else if (this._stretch === Image.STRETCH_EXTEND) {
+                const hr = dw / sWidth;
+                const vr = dh / sHeight;
+                const r = Math.max(hr, vr);
+                const w = sWidth * r;
+                const h = sHeight * r;
+                const offsetX = (dw - w) / 2;
+                const offsetY = (dh - h) / 2;
+                this._drawImage(context, sx, sy, sWidth, sHeight, x + offsetX, y + offsetY, w, h);
+            }
+            context.restore();
+        } else {
+            if (this._stretch === Image.STRETCH_NONE) {
+                this._drawImage(context, sx, sy, sWidth, sHeight, x, y, sWidth, sHeight);
+            } else if (this._stretch === Image.STRETCH_FILL) {
+                this._drawImage(context, sx, sy, sWidth, sHeight, x, y, dw, dh);
+            } else if (this._stretch === Image.STRETCH_UNIFORM) {
+                const hr = dw / sWidth;
+                const vr = dh / sHeight;
+                const r = Math.min(hr, vr);
+                const w = sWidth * r;
+                const h = sHeight * r;
+                const offsetX = (dw - w) / 2;
+                const offsetY = (dh - h) / 2;
+                this._drawImage(context, sx, sy, sWidth, sHeight, x + offsetX, y + offsetY, w, h);
+            } else if (this._stretch === Image.STRETCH_EXTEND) {
+                const hr = dw / sWidth;
+                const vr = dh / sHeight;
+                const r = Math.max(hr, vr);
+                const w = sWidth * r;
+                const h = sHeight * r;
+                const offsetX = (dw - w) / 2;
+                const offsetY = (dh - h) / 2;
+                this._drawImage(context, sx, sy, sWidth, sHeight, x + offsetX, y + offsetY, w, h);
+            }
+        }
     }
 
     private _renderNinePatch(context: ICanvasRenderingContext, sx: number, sy: number, sw: number, sh: number): void {
