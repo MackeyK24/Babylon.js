@@ -91,9 +91,13 @@ if (typeof (global as any).document === "undefined") {
                     },
                     removeEventListener: (type: string, cb: Function) => {
                         const arr = listeners[type];
-                        if (!arr) return;
+                        if (!arr) {
+                            return;
+                        }
                         const idx = arr.indexOf(cb);
-                        if (idx >= 0) arr.splice(idx, 1);
+                        if (idx >= 0) {
+                            arr.splice(idx, 1);
+                        }
                     },
                     set src(v: string) {
                         _src = v;
@@ -107,7 +111,7 @@ if (typeof (global as any).document === "undefined") {
                     get src() {
                         return _src;
                     },
-                    crossOrigin: null as any,
+                    crossOrigin: (null as any),
                     style: {},
                     width: 0,
                     height: 0,
