@@ -1,3 +1,5 @@
+import "./controls/index";
+
 import type { Nullable } from "core/types";
 import type { Observer } from "core/Misc/observable";
 import { Observable } from "core/Misc/observable";
