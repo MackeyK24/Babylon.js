@@ -47,6 +47,8 @@ if (typeof (global as any).OffscreenCanvas === "undefined") {
     } as any;
 
 
+}
+
 describe("GUI Image deserialization with children", () => {
     it("parses Image with a Rectangle child from serialized JSON", () => {
         const engine = new NullEngine();
