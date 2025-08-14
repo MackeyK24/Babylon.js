@@ -1,3 +1,9 @@
+// NOTE: This app is an easy place to test Inspector v2.
+// Additionally, here are some PGs that are helpful for testing specific features:
+// Frame graphs: http://localhost:1338/?inspectorv2#9YU4C5#23
+// Sprites: https://localhost:1338/?inspectorv2#YCY2IL#4
+// Animation groups: http://localhost:1338/?inspectorv2#FMAYKS
+
 import HavokPhysics from "@babylonjs/havok";
 import type { Nullable } from "core/types";
 
@@ -104,6 +110,42 @@ function createTestBoxes() {
     boxInstance.position = new Vector3(0, 0, -0.5);
 }
 
+function createTestMetadata() {
+    const materialMeta = new StandardMaterial("material.meta", scene);
+    materialMeta.emissiveColor = Color3.Red();
+    materialMeta.metadata = {
+        test: "test string",
+        description: "Material JSON metadata.",
+        someNumber: 73,
+    };
+
+    const defaultMeta = MeshBuilder.CreateBox("default.metadata", { size: 0.15 }, scene);
+
+    const undefinedMeta = defaultMeta.clone("undefined.metadata");
+    undefinedMeta.material = materialMeta;
+    undefinedMeta.metadata = undefined;
+
+    const jsonMeta = defaultMeta.clone("json.metadata");
+    jsonMeta.material = materialMeta;
+    jsonMeta.metadata = {
+        test: "test string",
+        description: "JSON metadata.",
+        someNumber: 42,
+    };
+
+    const nullMeta = defaultMeta.clone("null.metadata");
+    nullMeta.material = materialMeta;
+    nullMeta.metadata = null;
+
+    const stringMeta = defaultMeta.clone("string.metadata");
+    stringMeta.material = materialMeta;
+    stringMeta.metadata = "String metadata.";
+
+    const objectMeta = defaultMeta.clone("object.metadata");
+    objectMeta.material = materialMeta;
+    objectMeta.metadata = jsonMeta;
+}
+
 function createMaterials() {
     const multiMaterial = new MultiMaterial("multi", scene);
     multiMaterial.subMaterials.push(...scene.materials);
@@ -121,6 +163,8 @@ function createMaterials() {
     createTestPBRSphere();
 
     createMaterials();
+
+    createTestMetadata();
 
     engine.runRenderLoop(() => {
         scene.render();

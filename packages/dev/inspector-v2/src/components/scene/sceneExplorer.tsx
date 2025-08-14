@@ -3,13 +3,14 @@ import type { IDisposable, IReadonlyObservable, Nullable, Scene } from "core/ind
 import type { TreeItemValue, TreeOpenChangeData, TreeOpenChangeEvent } from "@fluentui/react-components";
 import type { ScrollToInterface } from "@fluentui/react-components/unstable";
 import type { ComponentType, FunctionComponent } from "react";
-
-import { Body1, Body1Strong, Button, FlatTree, FlatTreeItem, makeStyles, SearchBox, ToggleButton, tokens, Tooltip, TreeItemLayout } from "@fluentui/react-components";
+import { ToggleButton } from "shared-ui-components/fluent/primitives/toggleButton";
+import { Body1, Body1Strong, Button, FlatTree, FlatTreeItem, makeStyles, SearchBox, tokens, Tooltip, TreeItemLayout } from "@fluentui/react-components";
 import { VirtualizerScrollView } from "@fluentui/react-components/unstable";
 import { FilterRegular, MoviesAndTvRegular } from "@fluentui/react-icons";
+import type { FluentIcon } from "@fluentui/react-icons";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useObservableRenderer, useObservableState } from "../../hooks/observableHooks";
+import { useObservableState } from "../../hooks/observableHooks";
 import { useResource } from "../../hooks/resourceHooks";
 import { TraverseGraph } from "../../misc/graphUtils";
 
@@ -106,7 +107,7 @@ type Command<T extends EntityBase> = Partial<IDisposable> &
         /**
          * An observable that notifies when the command state changes.
          */
-        onChange?: IReadonlyObservable<void>;
+        onChange?: IReadonlyObservable<unknown>;
     }>;
 
 type ActionCommand<T extends EntityBase> = Command<T> & {
@@ -192,11 +193,15 @@ const useStyles = makeStyles({
 const ActionCommand: FunctionComponent<{ command: ActionCommand<EntityBase>; entity: EntityBase }> = (props) => {
     const { command } = props;
 
-    useObservableRenderer(command.onChange);
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    const [displayName, Icon, execute] = useObservableState(
+        useCallback(() => [command.displayName, command.icon, command.execute] as const, [command]),
+        command.onChange
+    );
 
     return (
-        <Tooltip key={command.displayName} content={command.displayName} relationship="label">
-            <Button icon={<command.icon />} appearance="subtle" onClick={() => command.execute()} />
+        <Tooltip content={displayName} relationship="label" positioning={"after"}>
+            <Button icon={<Icon />} appearance="subtle" onClick={() => execute()} />
         </Tooltip>
     );
 };
@@ -204,13 +209,14 @@ const ActionCommand: FunctionComponent<{ command: ActionCommand<EntityBase>; ent
 const ToggleCommand: FunctionComponent<{ command: ToggleCommand<EntityBase>; entity: EntityBase }> = (props) => {
     const { command } = props;
 
-    useObservableRenderer(command.onChange);
-
-    return (
-        <Tooltip content={command.displayName} relationship="label">
-            <ToggleButton icon={<command.icon />} appearance="transparent" checked={command.isEnabled} onClick={() => (command.isEnabled = !command.isEnabled)} />
-        </Tooltip>
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    const [displayName, Icon, isEnabled] = useObservableState(
+        useCallback(() => [command.displayName, command.icon, command.isEnabled] as const, [command]),
+        command.onChange
     );
+
+    // TODO-iv2: Consolidate icon prop passing approach for inspector and shared components
+    return <ToggleButton title={displayName} enabledIcon={Icon as FluentIcon} value={isEnabled} onChange={(val: boolean) => (command.isEnabled = val)} />;
 };
 
 const SceneTreeItem: FunctionComponent<{
