@@ -1,11 +1,12 @@
+import type { TargetedAnimation } from "core/index";
 import type { ServiceDefinition } from "../../../modularity/serviceDefinition";
 import type { ISceneContext } from "../../sceneContext";
 import type { ISceneExplorerService } from "./sceneExplorerService";
 
 import { FilmstripRegular, PauseFilled, PlayFilled, StackRegular } from "@fluentui/react-icons";
 
-import { AnimationGroup, TargetedAnimation } from "core/Animations/animationGroup";
-import { Observable } from "core/Misc";
+import { AnimationGroup } from "core/Animations/animationGroup";
+import { Observable } from "core/Misc/observable";
 import { InterceptProperty } from "../../../instrumentation/propertyInstrumentation";
 import { SceneContextIdentity } from "../../sceneContext";
 import { DefaultSectionsOrder } from "./defaultSectionsMetadata";
@@ -20,13 +21,11 @@ export const AnimationGroupExplorerServiceDefinition: ServiceDefinition<[], [ISc
             return undefined;
         }
 
-        const sectionRegistration = sceneExplorerService.addSection({
+        const sectionRegistration = sceneExplorerService.addSection<AnimationGroup | TargetedAnimation>({
             displayName: "Animation Groups",
             order: DefaultSectionsOrder.AnimationGroups,
-            predicate: (entity) => entity instanceof AnimationGroup || entity instanceof TargetedAnimation,
             getRootEntities: () => scene.animationGroups,
             getEntityChildren: (entity) => (entity instanceof AnimationGroup ? entity.targetedAnimations : []),
-            getEntityParent: (entity) => (entity instanceof TargetedAnimation ? entity.parent : null),
             getEntityDisplayInfo: (entity) => {
                 const namedEntity = entity instanceof AnimationGroup ? entity : entity.animation;
 

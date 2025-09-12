@@ -1810,8 +1810,6 @@ export class Viewer implements IDisposable {
         high.pipeline.resetAccumulation();
         // shadow map
         this._shadowState.normal?.ground.setEnabled(false);
-        high.pipeline.toggleShadow(true);
-        high.ground.setEnabled(true);
         this._startIblShadowsRenderTime();
 
         this._shadowState.high = high;
@@ -1917,6 +1915,11 @@ export class Viewer implements IDisposable {
                 },
                 refreshLightPositionDirection(reflectionRotation: number) {
                     let effectiveSourceDir = this.iblDirection.direction.normalizeToNew();
+
+                    if (this.light.getScene().useRightHandedSystem) {
+                        effectiveSourceDir.z *= -1;
+                    }
+
                     const rotationYMatrix = Matrix.RotationY(reflectionRotation * -1);
                     effectiveSourceDir = Vector3.TransformCoordinates(effectiveSourceDir, rotationYMatrix);
 
@@ -2751,7 +2754,7 @@ export class Viewer implements IDisposable {
         updateSkybox(this._skybox, this._camera);
     }
 
-    private _updateLight() {
+    protected _updateLight() {
         let shouldHaveDefaultLight: boolean;
         if (this._loadedModels.length === 0) {
             shouldHaveDefaultLight = false;

@@ -5,7 +5,7 @@ import type { ISceneExplorerService } from "./sceneExplorerService";
 import { FrameRegular, PlayFilled, PlayRegular } from "@fluentui/react-icons";
 
 import { FrameGraph } from "core/FrameGraph/frameGraph";
-import { Observable } from "core/Misc";
+import { Observable } from "core/Misc/observable";
 import { InterceptProperty } from "../../../instrumentation/propertyInstrumentation";
 import { SceneContextIdentity } from "../../sceneContext";
 import { DefaultSectionsOrder } from "./defaultSectionsMetadata";
@@ -23,7 +23,6 @@ export const FrameGraphExplorerServiceDefinition: ServiceDefinition<[], [ISceneE
         const sectionRegistration = sceneExplorerService.addSection({
             displayName: "Frame Graph",
             order: DefaultSectionsOrder.FrameGraphs,
-            predicate: (entity) => entity instanceof FrameGraph,
             getRootEntities: () => scene.frameGraphs,
             getEntityDisplayInfo: (frameGraph) => {
                 const onChangeObservable = new Observable<void>();
