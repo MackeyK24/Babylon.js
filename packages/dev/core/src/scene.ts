@@ -21,6 +21,7 @@ import type { KeyboardInfoPre, KeyboardInfo } from "./Events/keyboardEvents";
 import { ActionEvent } from "./Actions/actionEvent";
 import { PostProcessManager } from "./PostProcesses/postProcessManager";
 import type { IOfflineProvider } from "./Offline/IOfflineProvider";
+import { OverrideMatrixFunctions, ResetMatrixFunctions } from "./Materials/floatingOriginMatrixOverrides";
 import type { RenderingGroupInfo, IRenderingManagerAutoClearSetup } from "./Rendering/renderingManager";
 import { RenderingManager } from "./Rendering/renderingManager";
 import type {
@@ -137,6 +138,14 @@ export interface SceneOptions {
 
     /** Defines if the creation of the scene should impact the engine (Eg. UtilityLayer's scene) */
     virtual?: boolean;
+
+    /**
+     * @experimental
+     * FloatingOriginMode helps avoid floating point imprecision of rendering large worlds by
+     * 1. Forcing the engine to use doublePrecision mode
+     * 2. Offsetting uniform values before passing to shader so that camera is centered at origin and world is offset by camera position
+     */
+    floatingOriginMode?: boolean;
 }
 
 /**
@@ -264,6 +273,11 @@ export class Scene implements IAnimatable, IClipPlanesHolder, IAssetContainer {
      * The material properties need to be setup according to the type of texture in use.
      */
     public environmentBRDFTexture: BaseTexture;
+
+    /**
+     * This stores the brdf lookup for the fuzz layer of PBR materials in your scene.
+     */
+    public environmentFuzzBRDFTexture: BaseTexture;
 
     /**
      * Intensity of the environment (i.e. all indirect lighting) in all pbr material.
@@ -1225,13 +1239,14 @@ export class Scene implements IAnimatable, IClipPlanesHolder, IAssetContainer {
 
         const invertNormal = this.useRightHandedSystem === (this._mirroredCameraPosition != null);
 
-        TmpVectors.Vector4[0].set(eyePosition.x, eyePosition.y, eyePosition.z, invertNormal ? -1 : 1);
+        const offset = this.floatingOriginOffset;
+        const finalEyePos = TmpVectors.Vector4[0].set(eyePosition.x - offset.x, eyePosition.y - offset.y, eyePosition.z - offset.z, invertNormal ? -1 : 1);
 
         if (effect) {
             if (isVector3) {
-                effect.setFloat3(variableName, TmpVectors.Vector4[0].x, TmpVectors.Vector4[0].y, TmpVectors.Vector4[0].z);
+                effect.setFloat3(variableName, finalEyePos.x, finalEyePos.y, finalEyePos.z);
             } else {
-                effect.setVector4(variableName, TmpVectors.Vector4[0]);
+                effect.setVector4(variableName, finalEyePos);
             }
         }
 
@@ -1245,7 +1260,9 @@ export class Scene implements IAnimatable, IClipPlanesHolder, IAssetContainer {
     public finalizeSceneUbo(): UniformBuffer {
         const ubo = this.getSceneUniformBuffer();
         const eyePosition = this.bindEyePosition(null);
-        ubo.updateFloat4("vEyePosition", eyePosition.x, eyePosition.y, eyePosition.z, eyePosition.w);
+
+        const offset = this.floatingOriginOffset;
+        ubo.updateFloat4("vEyePosition", eyePosition.x - offset.x, eyePosition.y - offset.y, eyePosition.z - offset.z, eyePosition.w);
 
         ubo.update();
 
@@ -1995,6 +2012,12 @@ export class Scene implements IAnimatable, IClipPlanesHolder, IAssetContainer {
         } else {
             EngineStore._LastCreatedScene = this;
             engine.scenes.push(this);
+        }
+
+        if (options?.floatingOriginMode) {
+            engine.getCreationOptions().useHighPrecisionMatrix = true;
+            OverrideMatrixFunctions(this);
+            this._floatingOriginMode = true;
         }
 
         this._uid = null;
@@ -2752,6 +2775,26 @@ export class Scene implements IAnimatable, IClipPlanesHolder, IAssetContainer {
         this._sceneUbo = ubo;
         this._viewUpdateFlag = -1;
         this._projectionUpdateFlag = -1;
+    }
+
+    private _floatingOriginMode: boolean = false;
+    /**
+     * @experimental
+     * When true, enables floatingOriginMode which helps avoid floating point imprecision when using huge coordinate system by
+     * 1. Forcing the engine to use doublePrecision mode
+     * 2. Offsetting uniform values before passing to shader so that camera is centered at origin and world is offset by camera position
+     */
+    public get floatingOriginMode(): boolean {
+        return this._floatingOriginMode;
+    }
+
+    private _floatingOriginOffsetDefault: Vector3 = Vector3.Zero();
+    /**
+     * @experimental
+     * When floatingOriginMode is enabled, offset is equal to the active camera position in world space. If no active camera or floatingOriginMode is disabled, offset is 0.
+     */
+    public get floatingOriginOffset(): Vector3 {
+        return this.floatingOriginMode && this.activeCamera ? this.activeCamera.getWorldMatrix().getTranslation() : this._floatingOriginOffsetDefault;
     }
 
     /**
@@ -5713,6 +5756,8 @@ export class Scene implements IAnimatable, IClipPlanesHolder, IAssetContainer {
         this.onClearColorChangedObservable.clear();
         this.onEnvironmentTextureChangedObservable.clear();
         this.onMeshUnderPointerUpdatedObservable.clear();
+
+        ResetMatrixFunctions();
         this._isDisposed = true;
     }
 

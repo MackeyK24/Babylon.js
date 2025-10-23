@@ -40,6 +40,10 @@ import "./Shaders/ShadersInclude/depthFunctions";
 
 const MaterialPlugin = "atmo-pbr";
 
+const AerialPerspectiveLutLayers = 32;
+
+let UniqueId = 0;
+
 /**
  * Renders a physically based atmosphere.
  * Use {@link IsSupported} to check if the atmosphere is supported before creating an instance.
@@ -84,6 +88,7 @@ export class Atmosphere implements IDisposable {
     private _aerialPerspectiveRenderingGroup: number;
     private _globeAtmosphereRenderingGroup: number;
     private _isEnabled = true;
+    private _aerialPerspectiveLutHasBeenRendered = false;
 
     private _hasRenderedMultiScatteringLut = false;
     private _multiScatteringEffectWrapper: Nullable<EffectWrapper> = null;
@@ -113,6 +118,11 @@ export class Atmosphere implements IDisposable {
     public static IsSupported(engine: AbstractEngine): boolean {
         return !engine._badOS && !engine.isWebGPU && engine.version >= 2;
     }
+
+    /**
+     * The unique ID of this atmosphere instance.
+     */
+    public readonly uniqueId = UniqueId++;
 
     /**
      * Called after the atmosphere variables have been updated for the specified camera.
@@ -340,7 +350,7 @@ export class Atmosphere implements IDisposable {
 
         const scene = this.scene;
         const name = "atmo-aerialPerspective";
-        const renderTarget = (this._aerialPerspectiveLutRenderTarget = CreateRenderTargetTexture(name, { width: 16, height: 64, layers: 32 }, scene, {}));
+        const renderTarget = (this._aerialPerspectiveLutRenderTarget = CreateRenderTargetTexture(name, { width: 16, height: 64, layers: AerialPerspectiveLutLayers }, scene, {}));
         this._aerialPerspectiveLutEffectWrapper = CreateAerialPerspectiveEffectWrapper(this._engine, this.uniformBuffer);
 
         return renderTarget;
@@ -637,128 +647,6 @@ export class Atmosphere implements IDisposable {
         return this._cameraAtmosphereVariables;
     }
 
-    // These fields and properties are used to interop with the inspector and not meant to be part of the API.
-
-    private _peakRayleighScatteringMmInternal = new Vector3();
-    private _peakRayleighScatteringKm = new Vector3();
-    private _peakMieScatteringMmInternal = new Vector3();
-    private _peakMieScatteringKm = new Vector3();
-    private _peakMieAbsorptionMmInternal = new Vector3();
-    private _peakMieAbsorptionKm = new Vector3();
-    private _peakOzoneAbsorptionMmInternal = new Vector3();
-    private _peakOzoneAbsorptionKm = new Vector3();
-
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    private get _planetRadius(): number {
-        return this._physicalProperties.planetRadius;
-    }
-    private set _planetRadius(value: number) {
-        this._physicalProperties.planetRadius = value;
-    }
-
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    private get _planetRadiusOffset(): number {
-        return this._physicalProperties.planetRadiusOffset;
-    }
-    private set _planetRadiusOffset(value: number) {
-        this._physicalProperties.planetRadiusOffset = value;
-    }
-
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    private get _atmosphereThickness(): number {
-        return this._physicalProperties.atmosphereThickness;
-    }
-    private set _atmosphereThickness(value: number) {
-        this._physicalProperties.atmosphereThickness = value;
-    }
-
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    private get _rayleighScatteringScale(): number {
-        return this._physicalProperties.rayleighScatteringScale;
-    }
-    private set _rayleighScatteringScale(value: number) {
-        this._physicalProperties.rayleighScatteringScale = value;
-    }
-
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    private get _peakRayleighScatteringMm(): Vector3 {
-        this._physicalProperties.peakRayleighScattering.scaleToRef(1000.0, this._peakRayleighScatteringMmInternal);
-        return this._peakRayleighScatteringMmInternal;
-    }
-    private set _peakRayleighScatteringMm(value: Vector3) {
-        this._peakRayleighScatteringMmInternal.copyFrom(value);
-        this._peakRayleighScatteringMmInternal.scaleToRef(0.001, this._peakRayleighScatteringKm);
-        this._physicalProperties.peakRayleighScattering = this._peakRayleighScatteringKm;
-    }
-
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    private get _mieScatteringScale(): number {
-        return this._physicalProperties.mieScatteringScale;
-    }
-    private set _mieScatteringScale(value: number) {
-        this._physicalProperties.mieScatteringScale = value;
-    }
-
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    private get _peakMieScatteringMm(): Vector3 {
-        this._physicalProperties.peakMieScattering.scaleToRef(1000.0, this._peakMieScatteringMmInternal);
-        return this._peakMieScatteringMmInternal;
-    }
-    private set _peakMieScatteringMm(value: Vector3) {
-        this._peakMieScatteringMmInternal.copyFrom(value);
-        this._peakMieScatteringMmInternal.scaleToRef(0.001, this._peakMieScatteringKm);
-        this._physicalProperties.peakMieScattering = this._peakMieScatteringKm;
-    }
-
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    private get _mieAbsorptionScale(): number {
-        return this._physicalProperties.mieAbsorptionScale;
-    }
-    private set _mieAbsorptionScale(value: number) {
-        this._physicalProperties.mieAbsorptionScale = value;
-    }
-
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    private get _peakMieAbsorptionMm(): Vector3 {
-        this._physicalProperties.peakMieAbsorption.scaleToRef(1000.0, this._peakMieAbsorptionMmInternal);
-        return this._peakMieAbsorptionMmInternal;
-    }
-    private set _peakMieAbsorptionMm(value: Vector3) {
-        this._peakMieAbsorptionMmInternal.copyFrom(value);
-        this._peakMieAbsorptionMmInternal.scaleToRef(0.001, this._peakMieAbsorptionKm);
-        this._physicalProperties.peakMieAbsorption = this._peakMieAbsorptionKm;
-    }
-
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    private get _ozoneAbsorptionScale(): number {
-        return this._physicalProperties.ozoneAbsorptionScale;
-    }
-    private set _ozoneAbsorptionScale(value: number) {
-        this._physicalProperties.ozoneAbsorptionScale = value;
-    }
-
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    private get _peakOzoneAbsorptionMm(): Vector3 {
-        this._physicalProperties.peakOzoneAbsorption.scaleToRef(1000.0, this._peakOzoneAbsorptionMmInternal);
-        return this._peakOzoneAbsorptionMmInternal;
-    }
-    private set _peakOzoneAbsorptionMm(value: Vector3) {
-        this._peakOzoneAbsorptionMmInternal.copyFrom(value);
-        this._peakOzoneAbsorptionMmInternal.scaleToRef(0.001, this._peakOzoneAbsorptionKm);
-        this._physicalProperties.peakOzoneAbsorption = this._peakOzoneAbsorptionKm;
-    }
-
     /**
      * Constructs the {@link Atmosphere}.
      * @param name - The name of this instance.
@@ -773,6 +661,7 @@ export class Atmosphere implements IDisposable {
         options?: IAtmosphereOptions
     ) {
         const engine = (this._engine = scene.getEngine());
+
         if (engine.isWebGPU) {
             throw new Error("Atmosphere is not supported on WebGPU.");
         }
@@ -850,18 +739,30 @@ export class Atmosphere implements IDisposable {
 
         {
             const renderingManager = scene.renderingManager;
-            renderingManager.getRenderingGroup(this._skyRenderingGroup);
-            renderingManager.getRenderingGroup(this._aerialPerspectiveRenderingGroup);
-            renderingManager.getRenderingGroup(this._globeAtmosphereRenderingGroup);
+            if (this._skyRenderingGroup >= 0) {
+                renderingManager.getRenderingGroup(this._skyRenderingGroup);
+            }
+            if (this._aerialPerspectiveRenderingGroup >= 0) {
+                renderingManager.getRenderingGroup(this._aerialPerspectiveRenderingGroup);
+            }
+            if (this._globeAtmosphereRenderingGroup >= 0) {
+                renderingManager.getRenderingGroup(this._globeAtmosphereRenderingGroup);
+            }
 
             // Mark all rendering groups as being "not empty" before rendering the corresponding targets.
             // This ensures onAfterRenderTargetsRenderObservable is called for empty groups,
             // which allows the atmosphere to be rendered even when the groups are otherwise empty e.g.,
             // a scene with only the atmosphere in it, and no other Meshes.
             this._onBeforeDrawPhaseObserver = scene.onBeforeDrawPhaseObservable.add(() => {
-                renderingManager.getRenderingGroup(this._skyRenderingGroup)._empty = false;
-                renderingManager.getRenderingGroup(this._aerialPerspectiveRenderingGroup)._empty = false;
-                renderingManager.getRenderingGroup(this._globeAtmosphereRenderingGroup)._empty = false;
+                if (this._skyRenderingGroup >= 0) {
+                    renderingManager.getRenderingGroup(this._skyRenderingGroup)._empty = false;
+                }
+                if (this._aerialPerspectiveRenderingGroup >= 0) {
+                    renderingManager.getRenderingGroup(this._aerialPerspectiveRenderingGroup)._empty = false;
+                }
+                if (this._globeAtmosphereRenderingGroup >= 0) {
+                    renderingManager.getRenderingGroup(this._globeAtmosphereRenderingGroup)._empty = false;
+                }
             });
 
             // Draw compositors after the respective rendering group.
@@ -873,23 +774,25 @@ export class Atmosphere implements IDisposable {
                 const groupId = group.renderingGroupId;
 
                 if (this._skyRenderingGroup === groupId) {
-                    this._drawSkyCompositor();
+                    this.drawSkyCompositor();
                 }
 
                 if (this._aerialPerspectiveRenderingGroup === groupId) {
-                    this._drawAerialPerspectiveCompositor();
+                    this.drawAerialPerspectiveCompositor();
                 }
 
                 if (this._globeAtmosphereRenderingGroup === groupId) {
-                    this._drawGlobeAtmosphereCompositor();
+                    this.drawGlobeAtmosphereCompositor();
                 }
             });
         }
 
         // Ensure the atmosphere is disposed when the scene is disposed.
         scene.onDisposeObservable.addOnce(() => {
+            scene.removeExternalData("atmosphere");
             this.dispose();
         });
+        scene.addExternalData("atmosphere", this);
 
         // Registers a material plugin which will allow common materials to sample the atmosphere environment maps e.g.,
         // sky view LUT for glossy reflections and diffuse sky illiminance LUT for irradiance.
@@ -1055,7 +958,7 @@ export class Atmosphere implements IDisposable {
     /**
      * Draws the aerial perspective compositor using {@link EffectWrapper} and {@link EffectRenderer}.
      */
-    private _drawAerialPerspectiveCompositor(): void {
+    public drawAerialPerspectiveCompositor(): void {
         // Only works if we have a depth texture.
         if (this.depthTexture === null) {
             return;
@@ -1133,7 +1036,7 @@ export class Atmosphere implements IDisposable {
     /**
      * Draws the sky compositor using {@link EffectWrapper} and {@link EffectRenderer}.
      */
-    private _drawSkyCompositor(): void {
+    public drawSkyCompositor(): void {
         const isEnabled = this.isEnabled();
         if (!isEnabled) {
             return;
@@ -1192,7 +1095,7 @@ export class Atmosphere implements IDisposable {
     /**
      * Draws the globe atmosphere compositor using {@link EffectWrapper} and {@link EffectRenderer}.
      */
-    private _drawGlobeAtmosphereCompositor(): void {
+    public drawGlobeAtmosphereCompositor(): void {
         const isEnabled = this.isEnabled();
         if (!isEnabled) {
             return;
@@ -1319,7 +1222,7 @@ export class Atmosphere implements IDisposable {
         }
 
         if (this.uniformBuffer.useUbo) {
-            this._updateUniformBuffer();
+            this.updateUniformBuffer();
         }
 
         // Render the LUTs.
@@ -1337,9 +1240,17 @@ export class Atmosphere implements IDisposable {
                     this._drawSkyViewLut();
                 }
 
-                // Only need to render aerial perspective LUT when inside the atmosphere.
-                if (this._isAerialPerspectiveLutEnabled && this._cameraAtmosphereVariables.clampedCameraRadius <= this._physicalProperties.atmosphereRadius) {
-                    this._drawAerialPerspectiveLut();
+                if (this._isAerialPerspectiveLutEnabled) {
+                    // Only need to render aerial perspective LUT when inside the atmosphere.
+                    if (this._cameraAtmosphereVariables.clampedCameraRadius <= this._physicalProperties.atmosphereRadius) {
+                        this._drawAerialPerspectiveLut();
+                    } else {
+                        // Make sure to clear the LUT to some initial value if this would have otherwise been the first time rendering it.
+                        if (!this._aerialPerspectiveLutHasBeenRendered) {
+                            this._clearAerialPerspectiveLut();
+                        }
+                    }
+                    this._aerialPerspectiveLutHasBeenRendered = true;
                 }
             }
 
@@ -1379,17 +1290,16 @@ export class Atmosphere implements IDisposable {
         const name = uniformBuffer.name;
         uniformBuffer.bindToEffect(effect, name);
         if (uniformBuffer.useUbo) {
-            const engine = this.scene.getEngine();
-            engine.bindUniformBufferBase(uniformBuffer.getBuffer()!, effect._uniformBuffersNames[name], name);
+            uniformBuffer.bindUniformBuffer();
         } else {
-            this._updateUniformBuffer();
+            this.updateUniformBuffer();
         }
     }
 
     /**
      * Updates the atmosphere's uniform buffer.
      */
-    private _updateUniformBuffer(): void {
+    public updateUniformBuffer(): void {
         const physicalProperties = this._physicalProperties;
         const cameraAtmosphereVariables = this._cameraAtmosphereVariables;
         const ubo = this.uniformBuffer;
@@ -1455,10 +1365,9 @@ export class Atmosphere implements IDisposable {
             this._aerialPerspectiveLutRenderTarget,
             (effectRenderer, renderTarget, effect, engine) => {
                 this.bindUniformBufferToEffect(effect);
-                const layers = 32;
                 effect.setTexture("transmittanceLut", transmittanceLut);
                 effect.setTexture("multiScatteringLut", multiScatteringLut);
-                for (let layer = 0; layer < layers; layer++) {
+                for (let layer = 0; layer < AerialPerspectiveLutLayers; layer++) {
                     engine.bindFramebuffer(renderTarget!, undefined, undefined, undefined, true, undefined, layer);
                     effectRenderer.bindBuffers(effect);
                     effect.setFloat("layerIdx", layer);
@@ -1466,6 +1375,18 @@ export class Atmosphere implements IDisposable {
                 }
             }
         );
+    }
+
+    private _clearAerialPerspectiveLut(): void {
+        const renderTarget = this._aerialPerspectiveLutRenderTarget?.renderTarget;
+        if (renderTarget) {
+            const engine = this._engine;
+            const clearColor = { r: 0, g: 0, b: 0, a: 0 };
+            for (let layer = 0; layer < AerialPerspectiveLutLayers; layer++) {
+                engine.bindFramebuffer(renderTarget, undefined, undefined, undefined, true, undefined, layer);
+                engine.clear(clearColor, true, false, false);
+            }
+        }
     }
 
     /**
@@ -1527,13 +1448,19 @@ const CreateRenderTargetTexture = (
     scene: Scene,
     options?: RenderTargetTextureOptions
 ): RenderTargetTexture => {
+    const caps = scene.getEngine().getCaps();
+    const textureType = caps.textureHalfFloatRender
+        ? Constants.TEXTURETYPE_HALF_FLOAT
+        : caps.textureFloatRender
+          ? Constants.TEXTURETYPE_FLOAT
+          : Constants.TEXTURETYPE_UNSIGNED_BYTE;
     const rtOptions: RenderTargetTextureOptions = {
         generateMipMaps: false,
         generateDepthBuffer: false,
         generateStencilBuffer: false,
         gammaSpace: false,
         samplingMode: Constants.TEXTURE_BILINEAR_SAMPLINGMODE,
-        type: Constants.TEXTURETYPE_HALF_FLOAT,
+        type: textureType,
         format: Constants.TEXTUREFORMAT_RGBA,
         ...options,
     };

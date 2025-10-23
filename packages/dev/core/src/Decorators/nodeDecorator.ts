@@ -13,6 +13,8 @@ export const enum PropertyTypeForEdition {
     Int,
     /** property is a Vector2 */
     Vector2,
+    /** property is a Vector3 */
+    Vector3,
     /** property is a list of values */
     List,
     /** property is a Color4 */
@@ -23,6 +25,10 @@ export const enum PropertyTypeForEdition {
     TextureFormat,
     /** property (int) should be edited as a combo box with a list of texture types */
     TextureType,
+    /** property is a string */
+    String,
+    /** property is a matrix */
+    Matrix,
 }
 
 /**
