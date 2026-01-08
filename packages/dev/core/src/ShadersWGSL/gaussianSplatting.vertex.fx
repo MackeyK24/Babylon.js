@@ -19,7 +19,7 @@ uniform dataTextureSize: vec2f;
 uniform focal: vec2f;
 uniform kernelSize: f32;
 uniform eyePosition: vec3f;
-uniform viewDirectionFactor: vec3f;
+uniform alpha: f32;
 
 // textures
 var covariancesATexture: texture_2d<f32>;
@@ -58,11 +58,10 @@ fn main(input : VertexInputs) -> FragmentInputs {
     let worldRot: mat3x3f =  mat3x3f(mesh.world[0].xyz, mesh.world[1].xyz, mesh.world[2].xyz);
     let normWorldRot: mat3x3f = inverseMat3(worldRot);
 
-    var dir: vec3f = normalize(normWorldRot * (worldPos.xyz - uniforms.eyePosition.xyz));
-    dir *= uniforms.viewDirectionFactor;
-    vertexOutputs.vColor = vec4f(splat.color.xyz + computeSH(splat, dir), splat.color.w);
+    var eyeToSplatLocalSpace: vec3f = normalize(normWorldRot * (worldPos.xyz - uniforms.eyePosition.xyz));
+    vertexOutputs.vColor = vec4f(splat.color.xyz + computeSH(splat, eyeToSplatLocalSpace), splat.color.w * uniforms.alpha);
 #else
-    vertexOutputs.vColor = splat.color;
+    vertexOutputs.vColor = vec4f(splat.color.xyz, splat.color.w * uniforms.alpha);
 #endif
 
     vertexOutputs.position = gaussianSplatting(input.position.xy, worldPos.xyz, vec2f(1.0, 1.0), covA, covB, mesh.world, scene.view, scene.projection, uniforms.focal, uniforms.invViewport, uniforms.kernelSize);

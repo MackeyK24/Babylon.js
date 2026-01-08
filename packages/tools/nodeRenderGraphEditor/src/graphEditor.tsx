@@ -333,7 +333,7 @@ export class GraphEditor extends React.Component<IGraphEditorProps, IGraphEditor
             } else if (input.isCamera()) {
                 input.value = this.props.globalState.scene.activeCamera;
             } else if (input.isObjectList()) {
-                input.value = { meshes: [], particleSystems: [] };
+                input.value = { meshes: this.props.globalState.scene.meshes.slice(), particleSystems: this.props.globalState.scene.particleSystems.slice() };
             } else if (input.isShadowLight()) {
                 input.value = this.props.globalState.scene.lights[1] as IShadowLight;
             }
@@ -369,10 +369,13 @@ export class GraphEditor extends React.Component<IGraphEditorProps, IGraphEditor
                 await nodeRenderGraph.buildAsync(false, false);
             }
         } catch (err) {
-            if (LogErrorTrace) {
-                (console as any).log(err);
+            // We care about errors only if there is a host scene (the editor isprobably linked to a playground).
+            if (this.props.globalState.hostScene) {
+                if (LogErrorTrace) {
+                    (console as any).log(err);
+                }
+                this.props.globalState.onLogRequiredObservable.notifyObservers(new LogEntry(err, true));
             }
-            this.props.globalState.onLogRequiredObservable.notifyObservers(new LogEntry(err, true));
         }
     }
 

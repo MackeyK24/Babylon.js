@@ -41,6 +41,11 @@ type PropertyChangedEvent = {
     allowNullValue?: boolean;
 };
 
+/**
+ * Converts Inspector v1 options to Inspector v2 options.
+ * @param v1Options Inspector v1 options.
+ * @returns Inspector v2 options.
+ */
 export function ConvertOptions(v1Options: Partial<InspectorV1Options>): Partial<InspectorV2Options> {
     // Options not currently handled:
     // • enablePopup: Do users care about this one?
@@ -283,9 +288,15 @@ export function ConvertOptions(v1Options: Partial<InspectorV1Options>): Partial<
  * @deprecated This class only exists for backward compatibility. Use the module-level ShowInspector function instead.
  */
 export class Inspector {
-    private static _CurrentInspectorToken: Nullable<IDisposable> = null;
+    private static _CurrentInstance: Nullable<{ scene: Scene; options: Partial<InspectorV2Options>; disposeToken: IDisposable }> = null;
     private static _PopupToggler: Nullable<(side: "left" | "right") => void> = null;
     private static _SectionHighlighter: Nullable<(sectionIds: readonly string[]) => void> = null;
+    private static _SidePaneOpenCounter: Nullable<() => number> = null;
+
+    // @ts-expect-error TS6133: This is private, but used by debugLayer (same as Inspector v1).
+    private static get _OpenedPane() {
+        return this._SidePaneOpenCounter?.() ?? 0;
+    }
 
     public static readonly OnSelectionChangeObservable = new Observable<any>();
     public static readonly OnPropertyChangedObservable = new Observable<PropertyChangedEvent>();
@@ -311,7 +322,7 @@ export class Inspector {
     }
 
     public static get IsVisible(): boolean {
-        return !!this._CurrentInspectorToken;
+        return !!this._CurrentInstance;
     }
 
     public static Show(scene: Scene, userOptions: Partial<InspectorV1Options>) {
@@ -336,10 +347,12 @@ export class Inspector {
             factory: (shellService) => {
                 this._PopupToggler = (side: "left" | "right") => {
                     const sidePaneContainer = side === "left" ? shellService.leftSidePaneContainer : shellService.rightSidePaneContainer;
-                    if (sidePaneContainer.isDocked) {
-                        sidePaneContainer.undock();
-                    } else {
-                        sidePaneContainer.dock();
+                    if (sidePaneContainer) {
+                        if (sidePaneContainer.isDocked) {
+                            sidePaneContainer.undock();
+                        } else {
+                            sidePaneContainer.dock();
+                        }
                     }
                 };
 
@@ -411,16 +424,50 @@ export class Inspector {
         };
         serviceDefinitions.push(sectionHighlighterServiceDefinition);
 
+        const openedPanesServiceDefinition: ServiceDefinition<[], [IShellService]> = {
+            friendlyName: "Opened Panes Service (Backward Compatibility)",
+            consumes: [ShellServiceIdentity],
+            factory: (shellService) => {
+                this._SidePaneOpenCounter = () => (shellService.leftSidePaneContainer ? 1 : 0) + (shellService.rightSidePaneContainer ? 1 : 0);
+
+                return {
+                    dispose: () => {
+                        this._SidePaneOpenCounter = null;
+                    },
+                };
+            },
+        };
+        serviceDefinitions.push(openedPanesServiceDefinition);
+
         options = {
             ...options,
             serviceDefinitions: [...(options.serviceDefinitions ?? []), ...serviceDefinitions],
         };
 
-        this._CurrentInspectorToken = ShowInspector(scene, options);
+        this._CurrentInstance = {
+            scene,
+            options,
+            disposeToken: ShowInspector(scene, options),
+        };
     }
 
     public static Hide() {
-        this._CurrentInspectorToken?.dispose();
-        this._CurrentInspectorToken = null;
+        this._CurrentInstance?.disposeToken.dispose();
+        this._CurrentInstance = null;
+    }
+
+    // @ts-expect-error TS6133: This is private, but used by debugLayer (same as Inspector v1).
+    private static _SetNewScene(scene: Scene) {
+        if (this._CurrentInstance && this._CurrentInstance.scene !== scene) {
+            // TODO: For now, just hide and re-show the Inspector.
+            // Need to think more about this when we work on multi-scene support in Inspector v2.
+            const options = this._CurrentInstance.options;
+            this.Hide();
+            this._CurrentInstance = {
+                scene,
+                options,
+                disposeToken: ShowInspector(scene, options),
+            };
+        }
     }
 }

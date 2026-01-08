@@ -6,6 +6,7 @@ import { SystemBlock } from "core/Particles/Node/Blocks/systemBlock";
 import { NodeParticleBlockConnectionPointTypes } from "core/Particles/Node/Enums/nodeParticleBlockConnectionPointTypes";
 import { NodeParticleContextualSources } from "core/Particles/Node/Enums/nodeParticleContextualSources";
 import { ParticleMathBlock, ParticleMathBlockOperations } from "core/Particles/Node/Blocks/particleMathBlock";
+import { ParticleModuloBlock } from "core/Particles/Node/Blocks/particleModuloBlock";
 import { UpdateColorBlock } from "core/Particles/Node/Blocks/Update/updateColorBlock";
 import { ParticleLerpBlock } from "core/Particles/Node/Blocks/particleLerpBlock";
 import { UpdateScaleBlock } from "core/Particles/Node/Blocks/Update/updateScaleBlock";
@@ -28,6 +29,7 @@ import { SetupSpriteSheetBlock } from "core/Particles/Node/Blocks/Emitters/setup
 import { BasicSpriteUpdateBlock } from "core/Particles/Node/Blocks/Update/basicSpriteUpdateBlock";
 import { UpdateSpriteCellIndexBlock } from "core/Particles/Node/Blocks/Update/updateSpriteCellIndexBlock";
 import { UpdateFlowMapBlock } from "core/Particles/Node/Blocks/Update/updateFlowMapBlock";
+import { UpdateNoiseBlock } from "core/Particles/Node/Blocks/Update/updateNoiseBlock";
 import { ParticleConditionBlock, ParticleConditionBlockTests } from "core/Particles/Node/Blocks/Conditions/particleConditionBlock";
 import { CreateParticleBlock } from "core/Particles/Node/Blocks/Emitters/createParticleBlock";
 import { BoxShapeBlock } from "core/Particles/Node/Blocks/Emitters/boxShapeBlock";
@@ -150,6 +152,8 @@ export class BlockTools {
                 return new UpdateAgeBlock("Update age");
             case "UpdateFlowMapBlock":
                 return new UpdateFlowMapBlock("Update flow map");
+            case "UpdateNoiseBlock":
+                return new UpdateNoiseBlock("Update noise");
             case "UpdateAttractorBlock":
                 return new UpdateAttractorBlock("Update attractor");
             case "SystemBlock":
@@ -318,6 +322,10 @@ export class BlockTools {
             case "MaxBlock": {
                 const block = new ParticleMathBlock("Max");
                 block.operation = ParticleMathBlockOperations.Max;
+                return block;
+            }
+            case "ModuloBlock": {
+                const block = new ParticleModuloBlock("Modulo");
                 return block;
             }
             case "ToDegreesBlock": {
