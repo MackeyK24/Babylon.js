@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import * as React from "react";
-import type { GlobalState } from "../../globalState";
+import { type GlobalState } from "../../globalState";
 import { LineContainerComponent } from "shared-ui-components/lines/lineContainerComponent";
 import { DraggableLineComponent } from "shared-ui-components/lines/draggableLineComponent";
-import type { Observer } from "core/Misc/observable";
-import type { Nullable } from "core/types";
+import { type Observer } from "core/Misc/observable";
+import { type Nullable } from "core/types";
 import { DraggableLineWithButtonComponent } from "shared-ui-components/lines/draggableLineWithButtonComponent";
 import { LineWithFileButtonComponent } from "shared-ui-components/lines/lineWithFileButtonComponent";
 import { Tools } from "core/Misc/tools";
@@ -50,6 +50,9 @@ export class NodeListComponent extends React.Component<INodeListComponentProps, 
         MultiplyBlock: "Math block set to Multiply",
         SubtractBlock: "Math block set to Subtract",
         ModuloBlock: "Block to calculate the Modulo",
+        PowBlock: "Block to calculate the Power",
+        DotBlock: "Block to calculate the Dot product",
+        DistanceBlock: "Block to calculate the Distance between two vectors",
         PositionBlock: "Contextual block to get the position of a particle",
         DirectionBlock: "Contextual block to get the direction of a particle",
         DirectionScaleBlock: "Contextual block to get the direction scale of a particle",
@@ -127,9 +130,12 @@ export class NodeListComponent extends React.Component<INodeListComponentProps, 
         AlignAngleBlock: "Block used to align the angle of a particle to its direction",
         VectorLengthBlock: "Block used to get the length of a vector",
         LocalVariableBlock: "Block used to store local values (eg. within a loop)",
-        FresnelBlock: "Block used to compute the Fresnel term",
         ColorStepBlock: "Contextual block to get the expected color step of a particle",
         ScaledColorStepBlock: "Contextual block to get the expected scaled color step of a particle",
+        ClampBlock: "Block used to limit a value to a range between minimum and maximum values",
+        NLerpBlock: "Block used to normalize lerp between 2 values",
+        SmoothStepBlock: "Block used to smooth step a value",
+        StepBlock: "Block used to step a value",
     };
 
     private _customFrameList: { [key: string]: string };
@@ -243,6 +249,7 @@ export class NodeListComponent extends React.Component<INodeListComponentProps, 
                 "MultiplyBlock",
                 "SubtractBlock",
                 "ModuloBlock",
+                "PowBlock",
                 "NegateBlock",
                 "OneMinusBlock",
                 "ReciprocalBlock",
@@ -252,6 +259,9 @@ export class NodeListComponent extends React.Component<INodeListComponentProps, 
                 "FloorBlock",
                 "CeilingBlock",
                 "FloatToIntBlock",
+                "DotBlock",
+                "DistanceBlock",
+                "ClampBlock",
             ],
             Math__Scientific: [
                 "AbsBlock",
@@ -270,8 +280,8 @@ export class NodeListComponent extends React.Component<INodeListComponentProps, 
                 "VectorLengthBlock",
             ],
             Logical: ["EqualBlock", "NotEqualBlock", "LessThanBlock", "LessOrEqualBlock", "GreaterThanBlock", "GreaterOrEqualBlock", "XorBlock", "OrBlock", "AndBlock"],
-            Interpolation: ["LerpBlock", "GradientValueBlock", "GradientBlock"],
-            Misc: ["ConverterBlock", "RandomBlock", "DebugBlock", "ElbowBlock", "TeleportInBlock", "TeleportOutBlock", "LocalVariableBlock", "FresnelBlock"],
+            Interpolation: ["LerpBlock", "GradientValueBlock", "GradientBlock", "NLerpBlock", "SmoothStepBlock", "StepBlock"],
+            Misc: ["ConverterBlock", "RandomBlock", "DebugBlock", "ElbowBlock", "TeleportInBlock", "TeleportOutBlock", "LocalVariableBlock"],
             System_Nodes: ["SystemBlock", "TimeBlock", "DeltaBlock", "EmitterPositionBlock", "CameraPositionBlock"],
             Contextual: [
                 "PositionBlock",
@@ -357,7 +367,7 @@ export class NodeListComponent extends React.Component<INodeListComponentProps, 
                 }
             }
             NodeLedger.NameFormatter = (name) => {
-                let finalName = name;
+                let finalName: string;
                 // custom frame
                 if (name.endsWith("Custom")) {
                     const nameIndex = name.lastIndexOf("Custom");

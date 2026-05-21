@@ -1,11 +1,18 @@
-import type { FrameGraph, FrameGraphObjectList, IFrameGraphPass, Nullable, FrameGraphTextureHandle, InternalTexture, FrameGraphRenderContext } from "core/index";
+import {
+    type FrameGraph,
+    type FrameGraphObjectList,
+    type IFrameGraphPass,
+    type Nullable,
+    type FrameGraphTextureHandle,
+    type InternalTexture,
+    type FrameGraphRenderContext,
+} from "core/index";
 import { FrameGraphObjectListPass } from "./Passes/objectListPass";
 import { FrameGraphRenderPass } from "./Passes/renderPass";
 import { Observable } from "core/Misc/observable";
 
 /**
  * Represents a task in a frame graph.
- * @experimental
  */
 export abstract class FrameGraphTask {
     protected readonly _frameGraph: FrameGraph;
@@ -59,9 +66,6 @@ export abstract class FrameGraphTask {
      * The (texture) dependencies of the task (optional).
      */
     public dependencies?: Set<FrameGraphTextureHandle>;
-
-    /** @internal */
-    public _disableDebugMarkers = false;
 
     /**
      * Records the task in the frame graph. Use this function to add content (render passes, ...) to the task.
@@ -230,16 +234,14 @@ export abstract class FrameGraphTask {
 
         this.onBeforeTaskExecute.notifyObservers(this);
 
-        if (!this._disableDebugMarkers) {
-            this._frameGraph.engine._debugPushGroup(`${this.getClassName()} (${this.name})`);
-        }
+        this._frameGraph.engine._debugPushGroup?.(`${this.getClassName()} (${this.name})`);
 
-        for (const pass of passes) {
-            pass._execute();
-        }
-
-        if (!this._disableDebugMarkers) {
-            this._frameGraph.engine._debugPopGroup();
+        try {
+            for (const pass of passes) {
+                pass._execute();
+            }
+        } finally {
+            this._frameGraph.engine._debugPopGroup?.();
         }
 
         this.onAfterTaskExecute.notifyObservers(this);
@@ -247,20 +249,18 @@ export abstract class FrameGraphTask {
 
     /** @internal */
     public _initializePasses() {
-        if (!this._disableDebugMarkers) {
-            this._frameGraph.engine._debugPushGroup(`${this.getClassName()} (${this.name})`);
-        }
+        this._frameGraph.engine._debugPushGroup?.(`${this.getClassName()} (${this.name})`);
 
-        for (const pass of this._passes) {
-            pass._initialize();
-        }
+        try {
+            for (const pass of this._passes) {
+                pass._initialize();
+            }
 
-        for (const pass of this._passesDisabled) {
-            pass._initialize();
-        }
-
-        if (!this._disableDebugMarkers) {
-            this._frameGraph.engine._debugPopGroup();
+            for (const pass of this._passesDisabled) {
+                pass._initialize();
+            }
+        } finally {
+            this._frameGraph.engine._debugPopGroup?.();
         }
     }
 

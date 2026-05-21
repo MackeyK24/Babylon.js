@@ -1,6 +1,13 @@
 // AlphaG epsilon to avoid numerical issues
 #define MINIMUMVARIANCE 0.0005
 
+#ifndef TEXRD_DEFINED
+    fn TEXRD(t: texture_2d<f32>, ts: sampler, uv: vec2f) -> vec4f {
+        return textureSample(t, ts, uv);
+    }
+    #define TEXRD_DEFINED
+#endif
+
 fn convertRoughnessToAverageSlope(roughness: f32) -> f32
 {
     // Calculate AlphaG as square of roughness (add epsilon to avoid numerical issues)
@@ -57,7 +64,7 @@ fn getAARoughnessFactors(normalVector: vec3f) -> vec2f {
     #elif ANISOTROPIC_OPENPBR
         // Aniso parameter remapping OpenPBR
         fn getAnisotropicRoughness(alphaG: f32, anisotropy: f32) -> vec2f {
-            var alphaT: f32 = alphaG * sqrt(2.0 / (1.0 + (1.0 - anisotropy) * (1.0 - anisotropy)));
+            var alphaT: f32 = max(alphaG * alphaG * sqrt(2.0 / (1.0 + (1.0 - anisotropy) * (1.0 - anisotropy))), MINIMUMVARIANCE);
             var alphaB: f32 = max(alphaT * (1.0 - anisotropy), MINIMUMVARIANCE);
             return vec2f(alphaT, alphaB);
         }

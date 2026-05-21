@@ -1,22 +1,25 @@
-import type { Nullable } from "core/types";
-import type { Color4 } from "core/Maths/math.color";
-import type { BaseTexture } from "core/Materials/Textures/baseTexture";
-import type { ProceduralTexture } from "core/Materials/Textures/Procedurals/proceduralTexture";
-import type { Mesh } from "core/Meshes/mesh";
-import type { ColorGradient, FactorGradient } from "core/Misc";
-import type { ParticleSystem } from "core/Particles/particleSystem";
-import type { IParticleSystem } from "core/Particles/IParticleSystem";
-import type { BoxParticleEmitter } from "core/Particles/EmitterTypes/boxParticleEmitter";
-import type { ConeDirectedParticleEmitter, ConeParticleEmitter } from "core/Particles/EmitterTypes/coneParticleEmitter";
-import type { CustomParticleEmitter } from "core/Particles/EmitterTypes/customParticleEmitter";
-import type { CylinderDirectedParticleEmitter, CylinderParticleEmitter } from "core/Particles/EmitterTypes/cylinderParticleEmitter";
-import type { HemisphericParticleEmitter } from "core/Particles/EmitterTypes/hemisphericParticleEmitter";
-import type { MeshParticleEmitter } from "core/Particles/EmitterTypes/meshParticleEmitter";
-import type { PointParticleEmitter } from "core/Particles/EmitterTypes/pointParticleEmitter";
-import type { SphereDirectedParticleEmitter, SphereParticleEmitter } from "core/Particles/EmitterTypes/sphereParticleEmitter";
-import type { NodeParticleConnectionPoint } from "core/Particles/Node/nodeParticleBlockConnectionPoint";
-import type { IShapeBlock } from "core/Particles/Node/Blocks/Emitters/IShapeBlock";
-import type { NodeParticleBlockConnectionPointTypes } from "core/Particles/Node/Enums/nodeParticleBlockConnectionPointTypes";
+import { type Attractor } from "../attractor";
+import { type FlowMap } from "../flowMap";
+import { type Color4 } from "core/Maths/math.color";
+import { type ColorGradient } from "core/Misc";
+import { type FactorGradient } from "core/Misc/gradients";
+import { type Nullable } from "core/types";
+import { type BaseTexture } from "core/Materials/Textures/baseTexture";
+import { type ProceduralTexture } from "core/Materials/Textures/Procedurals/proceduralTexture";
+import { type Mesh } from "core/Meshes/mesh";
+import { type ParticleSystem } from "core/Particles/particleSystem";
+import { type IParticleSystem } from "core/Particles/IParticleSystem";
+import { type BoxParticleEmitter } from "core/Particles/EmitterTypes/boxParticleEmitter";
+import { type ConeDirectedParticleEmitter, type ConeParticleEmitter } from "core/Particles/EmitterTypes/coneParticleEmitter";
+import { type CustomParticleEmitter } from "core/Particles/EmitterTypes/customParticleEmitter";
+import { type CylinderDirectedParticleEmitter, type CylinderParticleEmitter } from "core/Particles/EmitterTypes/cylinderParticleEmitter";
+import { type HemisphericParticleEmitter } from "core/Particles/EmitterTypes/hemisphericParticleEmitter";
+import { type MeshParticleEmitter } from "core/Particles/EmitterTypes/meshParticleEmitter";
+import { type PointParticleEmitter } from "core/Particles/EmitterTypes/pointParticleEmitter";
+import { type SphereDirectedParticleEmitter, type SphereParticleEmitter } from "core/Particles/EmitterTypes/sphereParticleEmitter";
+import { type NodeParticleConnectionPoint } from "core/Particles/Node/nodeParticleBlockConnectionPoint";
+import { type IShapeBlock } from "core/Particles/Node/Blocks/Emitters/IShapeBlock";
+import { type NodeParticleBlockConnectionPointTypes } from "core/Particles/Node/Enums/nodeParticleBlockConnectionPointTypes";
 
 import { Vector2, Vector3 } from "core/Maths/math.vector";
 import { NodeParticleSystemSet } from "./nodeParticleSystemSet";
@@ -29,6 +32,7 @@ import { ParticleGradientValueBlock } from "./Blocks/particleGradientValueBlock"
 import { ParticleInputBlock } from "./Blocks/particleInputBlock";
 import { ParticleMathBlock, ParticleMathBlockOperations } from "./Blocks/particleMathBlock";
 import { ParticleRandomBlock, ParticleRandomBlockLocks } from "./Blocks/particleRandomBlock";
+import { ParticleLerpBlock } from "./Blocks/particleLerpBlock";
 import { ParticleTextureSourceBlock } from "./Blocks/particleSourceTextureBlock";
 import { ParticleVectorLengthBlock } from "./Blocks/particleVectorLengthBlock";
 import { SystemBlock } from "./Blocks/systemBlock";
@@ -44,11 +48,14 @@ import { SetupSpriteSheetBlock } from "./Blocks/Emitters/setupSpriteSheetBlock";
 import { SphereShapeBlock } from "./Blocks/Emitters/sphereShapeBlock";
 import { UpdateAngleBlock } from "./Blocks/Update/updateAngleBlock";
 import { BasicSpriteUpdateBlock } from "./Blocks/Update/basicSpriteUpdateBlock";
+import { UpdateAttractorBlock } from "./Blocks/Update/updateAttractorBlock";
 import { UpdateColorBlock } from "./Blocks/Update/updateColorBlock";
 import { UpdateDirectionBlock } from "./Blocks/Update/updateDirectionBlock";
+import { UpdateFlowMapBlock } from "./Blocks/Update/updateFlowMapBlock";
 import { UpdateNoiseBlock } from "./Blocks/Update/updateNoiseBlock";
 import { UpdatePositionBlock } from "./Blocks/Update/updatePositionBlock";
 import { UpdateSizeBlock } from "./Blocks/Update/updateSizeBlock";
+import { GenerateBase64StringFromPixelData } from "core/Misc/copyTools";
 
 /** Represents blocks or groups of blocks that can be used in multiple places in the graph, so they are stored in this context to be reused */
 type ConversionContext = {
@@ -104,7 +111,7 @@ async function _ExtractDatafromParticleSystemAsync(newSet: NodeParticleSystemSet
 // ------------- CREATE PARTICLE FUNCTIONS -------------
 
 // The creation of the different properties follows the order they are added to the CreationQueue in ThinParticleSystem:
-// Lifetime, Emit Power, Size, Scale/StartSize, Angle, Color, Noise, ColorDead, Ramp, Sheet
+// Lifetime, Emit Power, Size, Scale/StartSize, Angle, Color, Noise, ColorDead, Sheet
 function _CreateParticleBlockGroup(oldSystem: ParticleSystem, context: RuntimeConversionContext): NodeParticleConnectionPoint {
     // Create particle block
     const createParticleBlock = new CreateParticleBlock("Create Particle");
@@ -242,10 +249,15 @@ function _CreateParticleColorBlockGroup(oldSystem: ParticleSystem, context: Runt
         context.colorGradientValue0Output = _CreateParticleInitialValueFromGradient(oldSystem._colorGradients);
         return context.colorGradientValue0Output;
     } else {
-        const randomColorBlock = new ParticleRandomBlock("Random color");
-        _CreateAndConnectInput("Color 1", oldSystem.color1.clone(), randomColorBlock.min);
-        _CreateAndConnectInput("Color 2", oldSystem.color2.clone(), randomColorBlock.max);
-        return randomColorBlock.output;
+        const randomStepBlock = new ParticleRandomBlock("Random color step");
+        _CreateAndConnectInput("Min", 0, randomStepBlock.min);
+        _CreateAndConnectInput("Max", 1, randomStepBlock.max);
+
+        const lerpColorBlock = new ParticleLerpBlock("Lerp color");
+        _CreateAndConnectInput("Color 1", oldSystem.color1.clone(), lerpColorBlock.left);
+        _CreateAndConnectInput("Color 2", oldSystem.color2.clone(), lerpColorBlock.right);
+        randomStepBlock.output.connectTo(lerpColorBlock.gradient);
+        return lerpColorBlock.output;
     }
 }
 
@@ -423,6 +435,7 @@ function _SpriteSheetBlock(particle: NodeParticleConnectionPoint, oldSystem: Par
     spriteSheetBlock.end = oldSystem.endSpriteCellID;
     spriteSheetBlock.width = oldSystem.spriteCellWidth;
     spriteSheetBlock.height = oldSystem.spriteCellHeight;
+    spriteSheetBlock.spriteCellChangeSpeed = oldSystem.spriteCellChangeSpeed;
     spriteSheetBlock.loop = oldSystem.spriteCellLoop;
     spriteSheetBlock.randomStartCell = oldSystem.spriteRandomStartCell;
 
@@ -434,7 +447,7 @@ function _SpriteSheetBlock(particle: NodeParticleConnectionPoint, oldSystem: Par
 /**
  * Creates the group of blocks that represent the particle system update
  * The creation of the different properties follows the order they are added to the ProcessQueue in ThinParticleSystem:
- * Color, AngularSpeedGradients, AngularSpeed, VelocityGradients, Direction, LimitVelocityGradients, DragGradients, Position, Noise, SizeGradients, Gravity, RemapGradients
+ * Color, AngularSpeedGradients, AngularSpeed, VelocityGradients, Direction, LimitVelocityGradients, DragGradients, Position, Noise, SizeGradients, Gravity
  * @param inputParticle The particle input connection point
  * @param oldSystem The old particle system to convert
  * @param context The runtime conversion context
@@ -455,6 +468,14 @@ function _UpdateParticleBlockGroup(inputParticle: NodeParticleConnectionPoint, o
     }
 
     updatedParticle = _UpdateParticlePositionBlockGroup(updatedParticle, oldSystem.isLocal, context);
+
+    if (oldSystem.attractors && oldSystem.attractors.length > 0) {
+        updatedParticle = _UpdateParticleAttractorBlockGroup(updatedParticle, oldSystem.attractors);
+    }
+
+    if (oldSystem.flowMap) {
+        updatedParticle = _UpdateParticleFlowMapBlockGroup(updatedParticle, oldSystem.flowMap, oldSystem.flowMapStrength);
+    }
 
     if (oldSystem._limitVelocityGradients && oldSystem._limitVelocityGradients.length > 0 && oldSystem.limitVelocityDamping !== 0) {
         updatedParticle = _UpdateParticleVelocityLimitGradientBlockGroup(updatedParticle, oldSystem._limitVelocityGradients, oldSystem.limitVelocityDamping, context);
@@ -491,7 +512,7 @@ function _UpdateParticleColorBlockGroup(
     colorGradients: Nullable<Array<ColorGradient>>,
     context: RuntimeConversionContext
 ): NodeParticleConnectionPoint {
-    let colorCalculation: NodeParticleConnectionPoint | undefined = undefined;
+    let colorCalculation: NodeParticleConnectionPoint | undefined;
     if (colorGradients && colorGradients.length > 0) {
         if (context.colorGradientValue0Output === undefined) {
             throw new Error("Initial color gradient values not found in context.");
@@ -719,6 +740,53 @@ function _UpdateParticlePositionBlockGroup(inputParticle: NodeParticleConnection
 }
 
 /**
+ * Creates the group of blocks that represent the particle attractor update
+ * @param inputParticle The input particle to update
+ * @param attractors The attractors (if any)
+ * @returns The output of the group of blocks that represent the particle attractor update
+ */
+function _UpdateParticleAttractorBlockGroup(inputParticle: NodeParticleConnectionPoint, attractors: Attractor[]): NodeParticleConnectionPoint {
+    let outputParticle = inputParticle;
+
+    // Chain update attractor blocks for each attractor
+    for (let i = 0; i < attractors.length; i++) {
+        const attractor = attractors[i];
+        const attractorBlock = new UpdateAttractorBlock(`Attractor Block ${i}`);
+        outputParticle.connectTo(attractorBlock.particle);
+        _CreateAndConnectInput("Attractor Position", attractor.position.clone(), attractorBlock.attractor);
+        _CreateAndConnectInput("Attractor Strength", attractor.strength, attractorBlock.strength);
+        outputParticle = attractorBlock.output;
+    }
+
+    return outputParticle;
+}
+
+/**
+ * Creates the group of blocks that represent the particle flow map update
+ * @param inputParticle The input particle to update
+ * @param flowMap The flow map data
+ * @param flowMapStrength The strength of the flow map
+ * @returns The output of the group of blocks that represent the particle flow map update
+ */
+function _UpdateParticleFlowMapBlockGroup(inputParticle: NodeParticleConnectionPoint, flowMap: FlowMap, flowMapStrength: number): NodeParticleConnectionPoint {
+    // Create the flow map update block
+    const updateFlowMapBlock = new UpdateFlowMapBlock("Flow Map Update");
+    inputParticle.connectTo(updateFlowMapBlock.particle);
+
+    // Create a texture block from the flow map data
+    // The FlowMap only stores raw pixel data, so we need to convert it to a base64 data URL
+    // Y has to be flipped as the texture data is flipped between CPU (canvas, Y=0 at top) and GPU (texture, Y=0 at bottom)
+    const flowMapTextureBlock = new ParticleTextureSourceBlock("Flow Map Texture");
+    flowMapTextureBlock.serializedCachedData = true;
+    flowMapTextureBlock.textureDataUrl = GenerateBase64StringFromPixelData(flowMap.data, { width: flowMap.width, height: flowMap.height }, true) ?? "";
+    flowMapTextureBlock.textureOutput.connectTo(updateFlowMapBlock.flowMap);
+
+    _CreateAndConnectInput("Flow Map Strength", flowMapStrength, updateFlowMapBlock.strength);
+
+    return updateFlowMapBlock.output;
+}
+
+/**
  * Creates the group of blocks that represent the particle size update
  * @param inputParticle The input particle to update
  * @param sizeGradients The size gradients (if any)
@@ -848,21 +916,67 @@ function _SystemBlockGroup(updateParticleOutput: NodeParticleConnectionPoint, ol
     newSystem.preWarmCycles = oldSystem.preWarmCycles;
     newSystem.preWarmStepOffset = oldSystem.preWarmStepOffset;
     newSystem.isBillboardBased = oldSystem.isBillboardBased;
+    newSystem.billBoardMode = oldSystem.billboardMode;
     newSystem.isLocal = oldSystem.isLocal;
     newSystem.disposeOnStop = oldSystem.disposeOnStop;
+    newSystem.renderingGroupId = oldSystem.renderingGroupId;
+    const emitter = oldSystem.emitter;
+    if (emitter instanceof Vector3) {
+        newSystem.emitter = emitter.clone();
+    } else {
+        newSystem.emitter = emitter;
+    }
 
+    _SystemCustomShader(oldSystem, newSystem);
     _SystemEmitRateValue(oldSystem.getEmitRateGradients(), oldSystem.targetStopDuration, oldSystem.emitRate, newSystem, context);
+    _SystemTargetStopDuration(oldSystem.targetStopDuration, newSystem, context);
 
     const texture = oldSystem.particleTexture;
     if (texture) {
         _CreateTextureBlock(texture).connectTo(newSystem.texture);
     }
 
-    _SystemTargetStopDuration(oldSystem.targetStopDuration, newSystem, context);
-
     updateParticleOutput.connectTo(newSystem.particle);
 
     return newSystem;
+}
+
+function _SystemCustomShader(oldSystem: ParticleSystem, newSystem: SystemBlock) {
+    if (oldSystem.customShader) {
+        // Copy the custom shader configuration so it can be recreated when building the system
+        newSystem.customShader = {
+            shaderPath: {
+                fragmentElement: oldSystem.customShader.shaderPath.fragmentElement,
+            },
+            shaderOptions: {
+                uniforms: oldSystem.customShader.shaderOptions.uniforms.slice(),
+                samplers: oldSystem.customShader.shaderOptions.samplers.slice(),
+                defines: oldSystem.customShader.shaderOptions.defines.slice(),
+            },
+        };
+    } else {
+        // Check if there's a custom effect set directly without customShader metadata
+        // This happens when using the ThinParticleSystem constructor with a customEffect parameter or when calling setCustomEffect directly
+        const customEffect = oldSystem.getCustomEffect(0);
+        if (customEffect) {
+            const effectName = customEffect.name;
+            const fragmentElement =
+                typeof effectName === "string"
+                    ? effectName
+                    : ((effectName as { fragmentElement?: string; fragment?: string }).fragmentElement ?? (effectName as { fragment?: string }).fragment);
+
+            newSystem.customShader = {
+                shaderPath: {
+                    fragmentElement: fragmentElement ?? "",
+                },
+                shaderOptions: {
+                    uniforms: (customEffect as any)._uniformsNames.slice(),
+                    samplers: (customEffect as any)._samplerList.slice(),
+                    defines: customEffect.defines ? customEffect.defines.split("\n").filter((d) => d.length > 0) : [],
+                },
+            };
+        }
+    }
 }
 
 function _SystemEmitRateValue(
@@ -1093,5 +1207,5 @@ function _CreateTextureBlock(texture: Nullable<BaseTexture>): NodeParticleConnec
     // Texture - always use sourceTexture to preserve all texture options
     const textureBlock = new ParticleTextureSourceBlock("Texture");
     textureBlock.sourceTexture = texture;
-    return textureBlock.texture;
+    return textureBlock.textureOutput;
 }

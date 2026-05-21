@@ -1,9 +1,17 @@
-import { ToggleButton as FluentToggleButton } from "@fluentui/react-components";
-import type { ButtonProps } from "./button";
-import { useCallback, useContext, useEffect, useState } from "react";
-import type { FunctionComponent } from "react";
-import type { FluentIcon } from "@fluentui/react-icons";
+import { ToggleButton as FluentToggleButton, makeStyles } from "@fluentui/react-components";
+import { type ButtonProps } from "./button";
+import { useCallback, useContext, useEffect, useState, type FunctionComponent } from "react";
+import { type FluentIcon } from "@fluentui/react-icons";
 import { ToolContext } from "../hoc/fluentToolWrapper";
+import { Tooltip } from "./tooltip";
+
+const useStyles = makeStyles({
+    button: {
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+    },
+});
 
 type ToggleButtonProps = Omit<ButtonProps, "icon" | "onClick"> & {
     value: boolean;
@@ -23,27 +31,30 @@ export const ToggleButton: FunctionComponent<ToggleButtonProps> = (props) => {
     ToggleButton.displayName = "ToggleButton";
     const { value, onChange, title, appearance = "subtle" } = props;
     const { size } = useContext(ToolContext);
+    const classes = useStyles();
     const [checked, setChecked] = useState(value);
     const toggle = useCallback(() => {
-        setChecked((prev) => {
-            const enabled = !prev;
+        setChecked((prevChecked) => {
+            const enabled = !prevChecked;
             onChange(enabled);
             return enabled;
         });
-    }, [setChecked]);
+    }, [onChange]);
 
     useEffect(() => {
         setChecked(props.value);
     }, [props.value]);
 
     return (
-        <FluentToggleButton
-            title={title}
-            size={size}
-            icon={checked ? <props.checkedIcon /> : props.uncheckedIcon ? <props.uncheckedIcon /> : <props.checkedIcon />}
-            appearance={appearance}
-            checked={checked}
-            onClick={toggle}
-        />
+        <Tooltip content={title ?? ""}>
+            <FluentToggleButton
+                className={classes.button}
+                size={size}
+                icon={checked ? <props.checkedIcon /> : props.uncheckedIcon ? <props.uncheckedIcon /> : <props.checkedIcon />}
+                appearance={appearance}
+                checked={checked}
+                onClick={toggle}
+            />
+        </Tooltip>
     );
 };

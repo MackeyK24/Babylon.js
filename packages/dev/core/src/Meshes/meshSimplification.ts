@@ -1,10 +1,16 @@
-import type { IndicesArray } from "../types";
+import { type IndicesArray } from "../types";
 import { Vector3 } from "../Maths/math.vector";
 import { VertexBuffer } from "../Buffers/buffer";
 import { SubMesh } from "../Meshes/subMesh";
 import { Mesh } from "../Meshes/mesh";
 import { AsyncLoop } from "../Misc/tools";
 import { Epsilon } from "../Maths/math.constants";
+import { RegisterMeshSimplificationSceneComponent } from "./meshSimplificationSceneComponent.pure";
+import { type ISimplificationSettings, SimplificationType } from "./meshSimplification.common";
+
+export { SimplificationSettings, SimplificationType } from "./meshSimplification.common";
+export { type ISimplificationSettings } from "./meshSimplification.common";
+
 /**
  * A simplifier interface for future simplification implementations
  * @see https://doc.babylonjs.com/features/featuresDeepDive/mesh/simplifyingMeshes
@@ -18,47 +24,6 @@ export interface ISimplifier {
      * @param errorCallback in case of an error, this callback will be called. optional.
      */
     simplify(settings: ISimplificationSettings, successCallback: (simplifiedMeshes: Mesh) => void, errorCallback?: () => void): void;
-}
-
-/**
- * Expected simplification settings.
- * Quality should be between 0 and 1 (1 being 100%, 0 being 0%)
- * @see https://doc.babylonjs.com/features/featuresDeepDive/mesh/simplifyingMeshes
- */
-export interface ISimplificationSettings {
-    /**
-     * Gets or sets the expected quality
-     */
-    quality: number;
-    /**
-     * Gets or sets the distance when this optimized version should be used
-     */
-    distance: number;
-    /**
-     * Gets an already optimized mesh
-     */
-    optimizeMesh?: boolean | undefined;
-}
-
-/**
- * Class used to specify simplification options
- * @see https://doc.babylonjs.com/features/featuresDeepDive/mesh/simplifyingMeshes
- */
-export class SimplificationSettings implements ISimplificationSettings {
-    /**
-     * Creates a SimplificationSettings
-     * @param quality expected quality
-     * @param distance distance when this optimized version should be used
-     * @param optimizeMesh already optimized mesh
-     */
-    constructor(
-        /** expected quality */
-        public quality: number,
-        /** distance when this optimized version should be used */
-        public distance: number,
-        /** already optimized mesh  */
-        public optimizeMesh?: boolean
-    ) {}
 }
 
 /**
@@ -103,6 +68,7 @@ export class SimplificationQueue {
      * Creates a new queue
      */
     constructor() {
+        RegisterMeshSimplificationSceneComponent(SimplificationQueue);
         this.running = false;
         this._simplificationArray = [];
     }
@@ -192,24 +158,21 @@ export class SimplificationQueue {
     }
 }
 
-/**
- * The implemented types of simplification
- * At the moment only Quadratic Error Decimation is implemented
- * @see https://doc.babylonjs.com/features/featuresDeepDive/mesh/simplifyingMeshes
- */
-export const enum SimplificationType {
-    /** Quadratic error decimation */
-    QUADRATIC,
-}
-
 class DecimationTriangle {
+    /** @internal */
     public normal: Vector3;
+    /** @internal */
     public error: Array<number>;
+    /** @internal */
     public deleted: boolean;
+    /** @internal */
     public isDirty: boolean;
+    /** @internal */
     public borderFactor: number;
+    /** @internal */
     public deletePending: boolean;
 
+    /** @internal */
     public originalOffset: number;
 
     constructor(public _vertices: Array<DecimationVertex>) {
@@ -222,12 +185,17 @@ class DecimationTriangle {
 }
 
 class DecimationVertex {
+    /** @internal */
     public q: QuadraticMatrix;
+    /** @internal */
     public isBorder: boolean;
 
+    /** @internal */
     public triangleStart: number;
+    /** @internal */
     public triangleCount: number;
 
+    /** @internal */
     public originalOffsets: Array<number>;
 
     constructor(
@@ -241,12 +209,14 @@ class DecimationVertex {
         this.originalOffsets = [];
     }
 
+    /** @internal */
     public updatePosition(newPosition: Vector3) {
         this.position.copyFrom(newPosition);
     }
 }
 
 class QuadraticMatrix {
+    /** @internal */
     public data: Array<number>;
 
     constructor(data?: Array<number>) {
@@ -260,6 +230,7 @@ class QuadraticMatrix {
         }
     }
 
+    /** @internal */
     public det(a11: number, a12: number, a13: number, a21: number, a22: number, a23: number, a31: number, a32: number, a33: number): number {
         const det =
             this.data[a11] * this.data[a22] * this.data[a33] +
@@ -271,18 +242,21 @@ class QuadraticMatrix {
         return det;
     }
 
+    /** @internal */
     public addInPlace(matrix: QuadraticMatrix) {
         for (let i = 0; i < 10; ++i) {
             this.data[i] += matrix.data[i];
         }
     }
 
+    /** @internal */
     public addArrayInPlace(data: Array<number>) {
         for (let i = 0; i < 10; ++i) {
             this.data[i] += data[i];
         }
     }
 
+    /** @internal */
     public add(matrix: QuadraticMatrix): QuadraticMatrix {
         const m = new QuadraticMatrix();
         for (let i = 0; i < 10; ++i) {
@@ -291,6 +265,7 @@ class QuadraticMatrix {
         return m;
     }
 
+    /** @internal */
     public static FromData(a: number, b: number, c: number, d: number): QuadraticMatrix {
         return new QuadraticMatrix(QuadraticMatrix.DataFromNumbers(a, b, c, d));
     }
@@ -312,7 +287,6 @@ class Reference {
  * An implementation of the Quadratic Error simplification algorithm.
  * Original paper : http://www1.cs.columbia.edu/~cs4162/html05s/garland97.pdf
  * Ported mostly from QSlim and http://voxels.blogspot.de/2014/05/quadric-mesh-simplification-with-source.html to babylon JS
- * @author RaananW
  * @see https://doc.babylonjs.com/features/featuresDeepDive/mesh/simplifyingMeshes
  */
 export class QuadraticErrorSimplification implements ISimplifier {
@@ -874,7 +848,7 @@ export class QuadraticErrorSimplification implements ISimplifier {
     private _calculateError(vertex1: DecimationVertex, vertex2: DecimationVertex, pointResult?: Vector3): number {
         const q = vertex1.q.add(vertex2.q);
         const border = vertex1.isBorder && vertex2.isBorder;
-        let error: number = 0;
+        let error: number;
         const qDet = q.det(0, 1, 2, 1, 4, 5, 2, 5, 7);
 
         if (qDet !== 0 && !border) {

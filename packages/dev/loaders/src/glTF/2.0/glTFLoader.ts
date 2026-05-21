@@ -1,35 +1,34 @@
 /* eslint-disable @typescript-eslint/promise-function-async */
 /* eslint-disable no-restricted-syntax */
 /* eslint-disable github/no-then */
-import type { IndicesArray, Nullable, TypedArray, TypedArrayConstructor } from "core/types";
+import { type IndicesArray, type Nullable, type TypedArray, type TypedArrayConstructor } from "core/types";
 import { Deferred } from "core/Misc/deferred";
 import { Quaternion, Vector3, Matrix, TmpVectors } from "core/Maths/math.vector";
 import { Color3 } from "core/Maths/math.color";
 import { Tools } from "core/Misc/tools";
 import { Camera } from "core/Cameras/camera";
 import { FreeCamera } from "core/Cameras/freeCamera";
-import type { Animation } from "core/Animations/animation";
-import type { IAnimatable } from "core/Animations/animatable.interface";
-import type { IAnimationKey } from "core/Animations/animationKey";
-import { AnimationKeyInterpolation } from "core/Animations/animationKey";
-import type { AnimationGroup } from "core/Animations/animationGroup";
+import { type Animation } from "core/Animations/animation";
+import { type IAnimatable } from "core/Animations/animatable.interface";
+import { type IAnimationKey, AnimationKeyInterpolation } from "core/Animations/animationKey";
+import { type AnimationGroup } from "core/Animations/animationGroup";
 import { Bone } from "core/Bones/bone";
 import { Skeleton } from "core/Bones/skeleton";
 import { Material } from "core/Materials/material";
-import type { BaseTexture } from "core/Materials/Textures/baseTexture";
-import type { ITextureCreationOptions } from "core/Materials/Textures/texture";
-import { Texture } from "core/Materials/Textures/texture";
+import { type BaseTexture } from "core/Materials/Textures/baseTexture";
+import { type ITextureCreationOptions, Texture } from "core/Materials/Textures/texture";
 import { TransformNode } from "core/Meshes/transformNode";
 import { Buffer, VertexBuffer } from "core/Buffers/buffer";
+import { VertexBufferForEach, VertexBufferGetTypeByteLength } from "core/Buffers/buffer.pure";
 import { Geometry } from "core/Meshes/geometry";
 import { AbstractMesh } from "core/Meshes/abstractMesh";
 import { Mesh } from "core/Meshes/mesh";
 import { MorphTarget } from "core/Morph/morphTarget";
 import { MorphTargetManager } from "core/Morph/morphTargetManager";
-import type { ISceneLoaderAsyncResult, ISceneLoaderProgressEvent } from "core/Loading/sceneLoader";
-import type { Scene } from "core/scene";
-import type { IProperty } from "babylonjs-gltf2interface";
+import { type ISceneLoaderAsyncResult, type ISceneLoaderProgressEvent } from "core/Loading/sceneLoader";
+import { type Scene } from "core/scene";
 import {
+    type IProperty,
     AnimationChannelTargetPath,
     AnimationSamplerInterpolation,
     AccessorType,
@@ -41,49 +40,47 @@ import {
     TextureMagFilter,
     MeshPrimitiveMode,
 } from "babylonjs-gltf2interface";
-import type {
-    IGLTF,
-    ISampler,
-    INode,
-    IScene,
-    IMesh,
-    IAccessor,
-    ISkin,
-    ICamera,
-    IAnimation,
-    IBuffer,
-    IBufferView,
-    IMaterialPbrMetallicRoughness,
-    IMaterial,
-    ITextureInfo,
-    ITexture,
-    IImage,
-    IMeshPrimitive,
-    IArrayItem,
-    _ISamplerData,
-    IAnimationChannel,
-    IAnimationSampler,
-    _IAnimationSamplerData,
+import {
+    type IGLTF,
+    type ISampler,
+    type INode,
+    type IScene,
+    type IMesh,
+    type IAccessor,
+    type ISkin,
+    type ICamera,
+    type IAnimation,
+    type IBuffer,
+    type IBufferView,
+    type IMaterialPbrMetallicRoughness,
+    type IMaterial,
+    type ITextureInfo,
+    type ITexture,
+    type IImage,
+    type IMeshPrimitive,
+    type IArrayItem,
+    type _ISamplerData,
+    type IAnimationChannel,
+    type IAnimationSampler,
+    type _IAnimationSamplerData,
 } from "./glTFLoaderInterfaces";
-import type { IGLTFLoaderExtension } from "./glTFLoaderExtension";
-import type { IGLTFLoader, IGLTFLoaderData } from "../glTFFileLoader";
-import { GLTFFileLoader, GLTFLoaderState, GLTFLoaderCoordinateSystemMode, GLTFLoaderAnimationStartMode } from "../glTFFileLoader";
-import type { IDataBuffer } from "core/Misc/dataReader";
+import { type IGLTFLoaderExtension } from "./glTFLoaderExtension";
+import { type IGLTFLoader, type IGLTFLoaderData, GLTFFileLoader, GLTFLoaderState, GLTFLoaderCoordinateSystemMode, GLTFLoaderAnimationStartMode } from "../glTFFileLoader";
+import { type IDataBuffer } from "core/Misc/dataReader";
 import { DecodeBase64UrlToBinary, GetMimeType, IsBase64DataUrl, LoadFileError } from "core/Misc/fileTools";
 import { Logger } from "core/Misc/logger";
-import type { Light } from "core/Lights/light";
+import { type Light } from "core/Lights/light";
 import { BoundingInfo } from "core/Culling/boundingInfo";
-import type { AssetContainer } from "core/assetContainer";
-import type { AnimationPropertyInfo } from "./glTFLoaderAnimation";
-import type { IObjectInfo } from "core/ObjectModel/objectModelInterfaces";
-import { registeredGLTFExtensions, registerGLTFExtension, unregisterGLTFExtension } from "./glTFLoaderExtensionRegistry";
-import type { GLTFExtensionFactory } from "./glTFLoaderExtensionRegistry";
-import type { IInterpolationPropertyInfo } from "core/FlowGraph/typeDefinitions";
+import { type AssetContainer } from "core/assetContainer";
+import { type AnimationPropertyInfo } from "./glTFLoaderAnimation";
+import { type IObjectInfo } from "core/ObjectModel/objectModelInterfaces";
+import { registeredGLTFExtensions, registerGLTFExtension, unregisterGLTFExtension, type GLTFExtensionFactory } from "./glTFLoaderExtensionRegistry";
+import { type IInterpolationPropertyInfo } from "core/FlowGraph/typeDefinitions";
 import { GetMappingForKey } from "./Extensions/objectModelMapping";
 import { deepMerge } from "core/Misc/deepMerger";
 import { GetTypedArrayConstructor } from "core/Buffers/bufferUtils";
 import { Lazy } from "core/Misc/lazy";
-import type { IMaterialLoadingAdapter } from "./materialLoadingAdapter";
+import { type IMaterialLoadingAdapter } from "./materialLoadingAdapter";
 
 // Caching these dynamic imports gives a surprising perf boost (compared to importing them directly each time).
 const LazyAnimationGroupModulePromise = new Lazy(() => import("core/Animations/animationGroup"));
@@ -218,7 +215,8 @@ export class GLTFLoader implements IGLTFLoader {
 
     private readonly _parent: GLTFFileLoader;
     private readonly _extensions = new Array<IGLTFLoaderExtension>();
-    private _disposed = false;
+    /** @internal */
+    public _disposed = false;
     private _rootUrl: Nullable<string> = null;
     private _fileName: Nullable<string> = null;
     private _uniqueRootUrl: Nullable<string> = null;
@@ -229,9 +227,33 @@ export class GLTFLoader implements IGLTFLoader {
     private _defaultBabylonMaterialData: { [drawMode: number]: Material } = {};
     private readonly _postSceneLoadActions = new Array<() => void>();
     private readonly _materialAdapterCache = new WeakMap<Material, IMaterialLoadingAdapter>();
+    private readonly _materialAdapters = new Set<IMaterialLoadingAdapter>();
 
-    /** @internal */
-    public _pbrMaterialImpl: Nullable<Readonly<PBRMaterialImplementation>> | false = null;
+    /**
+     * Loaded PBR material implementations, keyed by their identifier (e.g. "pbr", "openpbr").
+     * Only populated after the load has started and only for the types actually needed by the asset.
+     * Empty when PBR materials are disabled (skipMaterials).
+     * @internal
+     */
+    public readonly _pbrMaterialImpls = new Map<string, Readonly<PBRMaterialImplementation>>();
+
+    /**
+     * Test if the given material is an instance of any PBR material type known to this loader.
+     * @param material The material to test
+     * @returns true if the material matches one of the loaded PBR implementations
+     */
+    public isMatchingMaterialType(material: Nullable<Material>): boolean {
+        if (!material) {
+            return false;
+        }
+        const materialImpls = Array.from(this._pbrMaterialImpls.values());
+        for (const impl of materialImpls) {
+            if (material instanceof impl.materialClass) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     /**
      * The default glTF sampler.
@@ -324,12 +346,19 @@ export class GLTFLoader implements IGLTFLoader {
     public _getOrCreateMaterialAdapter(material: Material): IMaterialLoadingAdapter {
         let adapter = this._materialAdapterCache.get(material);
         if (!adapter) {
-            if (this._pbrMaterialImpl) {
-                adapter = new this._pbrMaterialImpl.adapterClass(material);
-            } else {
+            const materialImpls = Array.from(this._pbrMaterialImpls.values());
+            for (const impl of materialImpls) {
+                if (material instanceof impl.materialClass) {
+                    adapter = new impl.adapterClass(material);
+                    break;
+                }
+            }
+            if (!adapter) {
                 throw new Error(`Appropriate material adapter class not found`);
             }
-            this._materialAdapterCache.set(material, adapter);
+            const createdAdapter = adapter;
+            this._materialAdapterCache.set(material, createdAdapter);
+            this._materialAdapters.add(createdAdapter);
         }
         return adapter;
     }
@@ -346,6 +375,8 @@ export class GLTFLoader implements IGLTFLoader {
 
         this._extensions.forEach((extension) => extension.dispose && extension.dispose());
         this._extensions.length = 0;
+
+        this._materialAdapters.clear();
 
         (this._gltf as Nullable<IGLTF>) = null; // TODO
         this._bin = null;
@@ -369,7 +400,6 @@ export class GLTFLoader implements IGLTFLoader {
         onProgress?: (event: ISceneLoaderProgressEvent) => void,
         fileName = ""
     ): Promise<ISceneLoaderAsyncResult> {
-        // eslint-disable-next-line github/no-then
         return await Promise.resolve().then(async () => {
             this._babylonScene = scene;
             this._assetContainer = container;
@@ -432,19 +462,47 @@ export class GLTFLoader implements IGLTFLoader {
 
                 await this._loadExtensionsAsync();
 
-                // NOTE: Explicitly check _pbrMaterialImpl for null as a value of false means don't use PBR materials at all.
-                if (!this.parent.skipMaterials && this._pbrMaterialImpl == null) {
-                    if (this.parent.useOpenPBR || this.isExtensionUsed("KHR_materials_openpbr")) {
-                        this._pbrMaterialImpl = {
-                            materialClass: (await import("core/Materials/PBR/openpbrMaterial")).OpenPBRMaterial,
-                            adapterClass: (await import("./openpbrMaterialLoadingAdapter")).OpenPBRMaterialLoadingAdapter,
-                        };
-                    } else {
-                        this._pbrMaterialImpl = {
-                            materialClass: (await import("core/Materials/PBR/pbrMaterial")).PBRMaterial,
-                            adapterClass: (await import("./pbrMaterialLoadingAdapter")).PBRMaterialLoadingAdapter,
-                        };
+                if (!this.parent.skipMaterials) {
+                    const needsOpenPBR = this.parent.useOpenPBR || this.isExtensionUsed("KHR_materials_openpbr");
+
+                    let needsPBR = false;
+                    if (!this.parent.useOpenPBR) {
+                        // PBR is needed when useOpenPBR is turned off.
+                        needsPBR = true;
+                    } else if (this._gltf.materials?.length && this._gltf.materials.some((m) => !m.extensions?.["KHR_materials_openpbr"])) {
+                        // PBR is needed if there is at least one material that does not use the KHR_materials_openpbr extension (i.e. relies on the default PBR implementation).
+                        needsPBR = true;
                     }
+
+                    const implPromises: Promise<void>[] = [];
+
+                    if (needsOpenPBR && !this._pbrMaterialImpls.has("openpbr")) {
+                        implPromises.push(
+                            Promise.all([import("core/Materials/PBR/openpbrMaterial"), import("./openpbrMaterialLoadingAdapter")]).then(
+                                ([{ OpenPBRMaterial: openPBRMaterialClass }, { OpenPBRMaterialLoadingAdapter: openPBRAdapterClass }]) => {
+                                    this._pbrMaterialImpls.set("openpbr", {
+                                        materialClass: openPBRMaterialClass,
+                                        adapterClass: openPBRAdapterClass,
+                                    });
+                                }
+                            )
+                        );
+                    }
+
+                    if (needsPBR && !this._pbrMaterialImpls.has("pbr")) {
+                        implPromises.push(
+                            Promise.all([import("core/Materials/PBR/pbrMaterial"), import("./pbrMaterialLoadingAdapter")]).then(
+                                ([{ PBRMaterial: pbrMaterialClass }, { PBRMaterialLoadingAdapter: pbrAdapterClass }]) => {
+                                    this._pbrMaterialImpls.set("pbr", {
+                                        materialClass: pbrMaterialClass,
+                                        adapterClass: pbrAdapterClass,
+                                    });
+                                }
+                            )
+                        );
+                    }
+
+                    await Promise.all(implPromises);
                 }
 
                 const loadingToReadyCounterName = `${GLTFLoaderState[GLTFLoaderState.LOADING]} => ${GLTFLoaderState[GLTFLoaderState.READY]}`;
@@ -512,6 +570,13 @@ export class GLTFLoader implements IGLTFLoader {
                         if (mat.maxSimultaneousLights !== undefined) {
                             mat.maxSimultaneousLights = Math.max(mat.maxSimultaneousLights, this._babylonScene.lights.length);
                         }
+                    }
+
+                    // Finalize all material adapters. finalizeAsync() may return a Promise for async
+                    // work (e.g. GPU texture processing); any returned Promise is pushed into
+                    // _completePromises so it is awaited before the COMPLETE state is reached.
+                    for (const adapter of Array.from(this._materialAdapters)) {
+                        this._completePromises.push(adapter.finalizeAsync(this));
                     }
 
                     this._extensionsOnReady();
@@ -665,7 +730,6 @@ export class GLTFLoader implements IGLTFLoader {
         if (this._parent.customRootNode !== undefined) {
             this._rootBabylonMesh = this._parent.customRootNode;
             return {
-                // eslint-disable-next-line @typescript-eslint/naming-convention
                 _babylonTransformNode: this._rootBabylonMesh === null ? undefined : this._rootBabylonMesh,
                 index: -1,
             };
@@ -678,7 +742,6 @@ export class GLTFLoader implements IGLTFLoader {
         this._rootBabylonMesh.setEnabled(false);
 
         const rootNode: INode = {
-            // eslint-disable-next-line @typescript-eslint/naming-convention
             _babylonTransformNode: this._rootBabylonMesh,
             index: -1,
         };
@@ -711,7 +774,7 @@ export class GLTFLoader implements IGLTFLoader {
      * @param scene The glTF scene property
      * @returns A promise that resolves when the load is complete
      */
-    // eslint-disable-next-line no-restricted-syntax, @typescript-eslint/promise-function-async
+
     public loadSceneAsync(context: string, scene: IScene): Promise<void> {
         const extensionPromise = this._extensionsLoadSceneAsync(context, scene);
         if (extensionPromise) {
@@ -872,7 +935,7 @@ export class GLTFLoader implements IGLTFLoader {
      * @param assign A function called synchronously after parsing the glTF properties
      * @returns A promise that resolves with the loaded Babylon mesh when the load is complete
      */
-    // eslint-disable-next-line @typescript-eslint/promise-function-async, no-restricted-syntax
+
     public loadNodeAsync(context: string, node: INode, assign: (babylonTransformNode: TransformNode) => void = () => {}): Promise<TransformNode> {
         const extensionPromise = this._extensionsLoadNodeAsync(context, node, assign);
         if (extensionPromise) {
@@ -999,7 +1062,6 @@ export class GLTFLoader implements IGLTFLoader {
         });
     }
 
-    // eslint-disable-next-line @typescript-eslint/promise-function-async, no-restricted-syntax
     private _loadMeshAsync(context: string, node: INode, mesh: IMesh, assign: (babylonTransformNode: TransformNode) => void): Promise<TransformNode> {
         const primitives = mesh.primitives;
         if (!primitives || !primitives.length) {
@@ -1059,7 +1121,7 @@ export class GLTFLoader implements IGLTFLoader {
      * @param assign A function called synchronously after parsing the glTF properties
      * @returns A promise that resolves with the loaded mesh when the load is complete or null if not handled
      */
-    // eslint-disable-next-line @typescript-eslint/promise-function-async, no-restricted-syntax
+
     public _loadMeshPrimitiveAsync(
         context: string,
         name: string,
@@ -1116,7 +1178,7 @@ export class GLTFLoader implements IGLTFLoader {
                 if (primitive.material == undefined) {
                     let babylonMaterial = this._defaultBabylonMaterialData[babylonDrawMode];
                     if (!babylonMaterial) {
-                        babylonMaterial = this._createDefaultMaterial("__GLTFLoader._default", babylonDrawMode);
+                        babylonMaterial = this._createDefaultMaterial("__GLTFLoader._default", babylonDrawMode, this._getDefaultImpl());
                         this._parent.onMaterialLoadedObservable.notifyObservers(babylonMaterial);
                         this._defaultBabylonMaterialData[babylonDrawMode] = babylonMaterial;
                     }
@@ -1154,7 +1216,6 @@ export class GLTFLoader implements IGLTFLoader {
         });
     }
 
-    // eslint-disable-next-line @typescript-eslint/promise-function-async, no-restricted-syntax
     private _loadVertexDataAsync(context: string, primitive: IMeshPrimitive, babylonMesh: Mesh): Promise<Geometry> {
         const extensionPromise = this._extensionsLoadVertexDataAsync(context, primitive, babylonMesh);
         if (extensionPromise) {
@@ -1266,7 +1327,6 @@ export class GLTFLoader implements IGLTFLoader {
         }
     }
 
-    // eslint-disable-next-line @typescript-eslint/promise-function-async, no-restricted-syntax
     private _loadMorphTargetsAsync(context: string, primitive: IMeshPrimitive, babylonMesh: Mesh, babylonGeometry: Geometry): Promise<void> {
         if (!primitive.targets || !this._parent.loadMorphTargets) {
             return Promise.resolve();
@@ -1420,7 +1480,6 @@ export class GLTFLoader implements IGLTFLoader {
         babylonNode.scaling = scaling;
     }
 
-    // eslint-disable-next-line @typescript-eslint/promise-function-async, no-restricted-syntax
     private _loadSkinAsync(context: string, node: INode, skin: ISkin, assign: (babylonSkeleton: Skeleton) => void): Promise<void> {
         if (!this._parent.loadSkins) {
             return Promise.resolve();
@@ -1976,7 +2035,7 @@ export class GLTFLoader implements IGLTFLoader {
             try {
                 return new Uint8Array(data.buffer, data.byteOffset + byteOffset, byteLength);
             } catch (e) {
-                throw new Error(`${context}: ${e.message}`);
+                throw new Error(`${context}: ${e.message}`, { cause: e });
             }
         });
     }
@@ -2009,7 +2068,7 @@ export class GLTFLoader implements IGLTFLoader {
         }
 
         const numComponents = GLTFLoader._GetNumComponents(context, accessor.type);
-        const byteStride = numComponents * VertexBuffer.GetTypeByteLength(accessor.componentType);
+        const byteStride = numComponents * VertexBufferGetTypeByteLength(accessor.componentType);
         const length = numComponents * accessor.count;
 
         if (accessor.bufferView == undefined) {
@@ -2021,7 +2080,7 @@ export class GLTFLoader implements IGLTFLoader {
                     return GLTFLoader._GetTypedArray(context, accessor.componentType, data, accessor.byteOffset, length);
                 } else {
                     const typedArray = new constructor(length);
-                    VertexBuffer.ForEach(
+                    VertexBufferForEach(
                         data,
                         accessor.byteOffset || 0,
                         bufferView.byteStride || byteStride,
@@ -2064,7 +2123,7 @@ export class GLTFLoader implements IGLTFLoader {
                     } else {
                         const sparseData = GLTFLoader._GetTypedArray(`${context}/sparse/values`, accessor.componentType, valuesData, sparse.values.byteOffset, sparseLength);
                         values = new constructor(sparseLength);
-                        VertexBuffer.ForEach(sparseData, 0, byteStride, numComponents, accessor.componentType, values.length, accessor.normalized || false, (value, index) => {
+                        VertexBufferForEach(sparseData, 0, byteStride, numComponents, accessor.componentType, values.length, accessor.normalized || false, (value, index) => {
                             values[index] = value;
                         });
                     }
@@ -2284,16 +2343,54 @@ export class GLTFLoader implements IGLTFLoader {
         });
     }
 
-    private _createDefaultMaterial(name: string, babylonDrawMode: number): Material {
-        if (!this._pbrMaterialImpl) {
-            throw new Error("PBR Material class not loaded");
+    /**
+     * Selects the appropriate PBR material implementation for a given glTF material.
+     * Uses OpenPBR when the material carries a "KHR_materials_openpbr" extension or when
+     * the loader-level `useOpenPBR` flag is set; falls back to standard PBR otherwise.
+     * @param material The glTF material
+     * @returns The matching loaded implementation
+     */
+    private _selectImplForGltfMaterial(material: IMaterial): Readonly<PBRMaterialImplementation> {
+        if (this.parent.useOpenPBR || material.extensions?.["KHR_materials_openpbr"]) {
+            const impl = this._pbrMaterialImpls.get("openpbr");
+            if (impl) {
+                return impl;
+            }
         }
+        const impl = this._pbrMaterialImpls.get("pbr");
+        if (impl) {
+            return impl;
+        }
+        throw new Error("No PBR material implementation loaded");
+    }
+
+    /**
+     * Returns the default PBR material implementation used when there is no per-material
+     * selection context (e.g. when creating the built-in default material for primitives
+     * that have no glTF material assigned).  Prefers OpenPBR when `useOpenPBR` is set.
+     * @returns The default loaded implementation
+     */
+    private _getDefaultImpl(): Readonly<PBRMaterialImplementation> {
+        if (this.parent.useOpenPBR) {
+            const impl = this._pbrMaterialImpls.get("openpbr");
+            if (impl) {
+                return impl;
+            }
+        }
+        const impl = this._pbrMaterialImpls.get("pbr") ?? this._pbrMaterialImpls.values().next().value;
+        if (impl) {
+            return impl;
+        }
+        throw new Error("No PBR material implementation loaded");
+    }
+
+    private _createDefaultMaterial(name: string, babylonDrawMode: number, impl: Readonly<PBRMaterialImplementation>): Material {
         this._babylonScene._blockEntityCollection = !!this._assetContainer;
-        const babylonMaterial = new this._pbrMaterialImpl.materialClass(name, this._babylonScene);
+        const babylonMaterial = new impl.materialClass(name, this._babylonScene);
         babylonMaterial._parentContainer = this._assetContainer;
         this._babylonScene._blockEntityCollection = false;
         babylonMaterial.fillMode = babylonDrawMode;
-        babylonMaterial.transparencyMode = this._pbrMaterialImpl.materialClass.MATERIAL_OPAQUE;
+        babylonMaterial.transparencyMode = impl.materialClass.MATERIAL_OPAQUE;
         // Create the material adapter and set some default properties.
         // We don't need to wait for the promise to resolve here.
         const adapter = this._getOrCreateMaterialAdapter(babylonMaterial);
@@ -2320,7 +2417,7 @@ export class GLTFLoader implements IGLTFLoader {
         }
 
         const name = material.name || `material${material.index}`;
-        const babylonMaterial = this._createDefaultMaterial(name, babylonDrawMode);
+        const babylonMaterial = this._createDefaultMaterial(name, babylonDrawMode, this._selectImplForGltfMaterial(material));
 
         return babylonMaterial;
     }
@@ -2435,7 +2532,7 @@ export class GLTFLoader implements IGLTFLoader {
      * @param babylonMaterial The Babylon material
      */
     public loadMaterialAlphaProperties(context: string, material: IMaterial, babylonMaterial: Material): void {
-        if (!this._pbrMaterialImpl) {
+        if (this._pbrMaterialImpls.size === 0) {
             throw new Error(`${context}: Material type not supported`);
         }
 
@@ -2445,12 +2542,12 @@ export class GLTFLoader implements IGLTFLoader {
         const alphaMode = material.alphaMode || MaterialAlphaMode.OPAQUE;
         switch (alphaMode) {
             case MaterialAlphaMode.OPAQUE: {
-                babylonMaterial.transparencyMode = this._pbrMaterialImpl.materialClass.MATERIAL_OPAQUE;
+                babylonMaterial.transparencyMode = Material.MATERIAL_OPAQUE;
                 babylonMaterial.alpha = 1.0; // Force alpha to 1.0 for opaque mode.
                 break;
             }
             case MaterialAlphaMode.MASK: {
-                babylonMaterial.transparencyMode = this._pbrMaterialImpl.materialClass.MATERIAL_ALPHATEST;
+                babylonMaterial.transparencyMode = Material.MATERIAL_ALPHATEST;
                 adapter.alphaCutOff = material.alphaCutoff == undefined ? 0.5 : material.alphaCutoff;
                 if (baseColorTexture) {
                     baseColorTexture.hasAlpha = true;
@@ -2458,7 +2555,7 @@ export class GLTFLoader implements IGLTFLoader {
                 break;
             }
             case MaterialAlphaMode.BLEND: {
-                babylonMaterial.transparencyMode = this._pbrMaterialImpl.materialClass.MATERIAL_ALPHABLEND;
+                babylonMaterial.transparencyMode = Material.MATERIAL_ALPHABLEND;
                 if (baseColorTexture) {
                     baseColorTexture.hasAlpha = true;
                     adapter.useAlphaFromBaseColorTexture = true;
@@ -2565,10 +2662,12 @@ export class GLTFLoader implements IGLTFLoader {
         this._babylonScene._blockEntityCollection = false;
         promises.push(deferred.promise);
 
+        const nonBase64Uri = image.uri && !IsBase64DataUrl(image.uri) ? image.uri : undefined;
+        const imageId = nonBase64Uri ?? `${this._fileName}#image${image.index}`;
+
         promises.push(
             this.loadImageAsync(`/images/${image.index}`, image).then((data) => {
-                const name = image.uri || `${this._fileName}#image${image.index}`;
-                const dataUrl = `data:${this._uniqueRootUrl}${name}`;
+                const dataUrl = `data:${this._uniqueRootUrl}${imageId}`;
                 babylonTexture.updateURL(dataUrl, data);
 
                 // Set the internal texture label.
@@ -2584,7 +2683,8 @@ export class GLTFLoader implements IGLTFLoader {
         assign(babylonTexture);
 
         if (this._parent.useGltfTextureNames) {
-            babylonTexture.name = image.name || image.uri || `image${image.index}`;
+            const textureName = image.name || nonBase64Uri || `image${image.index}`;
+            babylonTexture.name = textureName;
         }
 
         return Promise.all(promises).then(() => {
@@ -2755,7 +2855,7 @@ export class GLTFLoader implements IGLTFLoader {
         try {
             return GetTypedArrayConstructor(componentType);
         } catch (e) {
-            throw new Error(`${context}: ${e.message}`);
+            throw new Error(`${context}: ${e.message}`, { cause: e });
         }
     }
 
@@ -2765,7 +2865,7 @@ export class GLTFLoader implements IGLTFLoader {
 
         const constructor = GLTFLoader._GetTypedArrayConstructor(`${context}/componentType`, componentType);
 
-        const componentTypeLength = VertexBuffer.GetTypeByteLength(componentType);
+        const componentTypeLength = VertexBufferGetTypeByteLength(componentType);
         if (byteOffset % componentTypeLength !== 0) {
             // HACK: Copy the buffer if byte offset is not a multiple of component type byte length.
             Logger.Warn(`${context}: Copying buffer as byte offset (${byteOffset}) is not a multiple of component type byte length (${componentTypeLength})`);
@@ -2919,27 +3019,22 @@ export class GLTFLoader implements IGLTFLoader {
         this._forEachExtensions((extension) => extension.onReady && extension.onReady());
     }
 
-    // eslint-disable-next-line no-restricted-syntax
     private _extensionsLoadSceneAsync(context: string, scene: IScene): Nullable<Promise<void>> {
         return this._applyExtensions(scene, "loadScene", (extension) => extension.loadSceneAsync && extension.loadSceneAsync(context, scene));
     }
 
-    // eslint-disable-next-line no-restricted-syntax
     private _extensionsLoadNodeAsync(context: string, node: INode, assign: (babylonTransformNode: TransformNode) => void): Nullable<Promise<TransformNode>> {
         return this._applyExtensions(node, "loadNode", (extension) => extension.loadNodeAsync && extension.loadNodeAsync(context, node, assign));
     }
 
-    // eslint-disable-next-line no-restricted-syntax
     private _extensionsLoadCameraAsync(context: string, camera: ICamera, assign: (babylonCamera: Camera) => void): Nullable<Promise<Camera>> {
         return this._applyExtensions(camera, "loadCamera", (extension) => extension.loadCameraAsync && extension.loadCameraAsync(context, camera, assign));
     }
 
-    // eslint-disable-next-line no-restricted-syntax
     private _extensionsLoadVertexDataAsync(context: string, primitive: IMeshPrimitive, babylonMesh: Mesh): Nullable<Promise<Geometry>> {
         return this._applyExtensions(primitive, "loadVertexData", (extension) => extension._loadVertexDataAsync && extension._loadVertexDataAsync(context, primitive, babylonMesh));
     }
 
-    // eslint-disable-next-line no-restricted-syntax
     private _extensionsLoadMeshPrimitiveAsync(
         context: string,
         name: string,
@@ -2955,7 +3050,6 @@ export class GLTFLoader implements IGLTFLoader {
         );
     }
 
-    // eslint-disable-next-line no-restricted-syntax
     private _extensionsLoadMaterialAsync(
         context: string,
         material: IMaterial,
@@ -2974,7 +3068,6 @@ export class GLTFLoader implements IGLTFLoader {
         return this._applyExtensions(material, "createMaterial", (extension) => extension.createMaterial && extension.createMaterial(context, material, babylonDrawMode));
     }
 
-    // eslint-disable-next-line no-restricted-syntax
     private _extensionsLoadMaterialPropertiesAsync(context: string, material: IMaterial, babylonMaterial: Material): Nullable<Promise<void>> {
         return this._applyExtensions(
             material,
@@ -2983,22 +3076,18 @@ export class GLTFLoader implements IGLTFLoader {
         );
     }
 
-    // eslint-disable-next-line no-restricted-syntax
     private _extensionsLoadTextureInfoAsync(context: string, textureInfo: ITextureInfo, assign: (babylonTexture: BaseTexture) => void): Nullable<Promise<BaseTexture>> {
         return this._applyExtensions(textureInfo, "loadTextureInfo", (extension) => extension.loadTextureInfoAsync && extension.loadTextureInfoAsync(context, textureInfo, assign));
     }
 
-    // eslint-disable-next-line no-restricted-syntax
     private _extensionsLoadTextureAsync(context: string, texture: ITexture, assign: (babylonTexture: BaseTexture) => void): Nullable<Promise<BaseTexture>> {
         return this._applyExtensions(texture, "loadTexture", (extension) => extension._loadTextureAsync && extension._loadTextureAsync(context, texture, assign));
     }
 
-    // eslint-disable-next-line no-restricted-syntax
     private _extensionsLoadAnimationAsync(context: string, animation: IAnimation): Nullable<Promise<AnimationGroup>> {
         return this._applyExtensions(animation, "loadAnimation", (extension) => extension.loadAnimationAsync && extension.loadAnimationAsync(context, animation));
     }
 
-    // eslint-disable-next-line no-restricted-syntax
     private _extensionsLoadAnimationChannelAsync(
         context: string,
         animationContext: string,
@@ -3013,22 +3102,18 @@ export class GLTFLoader implements IGLTFLoader {
         );
     }
 
-    // eslint-disable-next-line no-restricted-syntax
     private _extensionsLoadSkinAsync(context: string, node: INode, skin: ISkin): Nullable<Promise<void>> {
         return this._applyExtensions(skin, "loadSkin", (extension) => extension._loadSkinAsync && extension._loadSkinAsync(context, node, skin));
     }
 
-    // eslint-disable-next-line no-restricted-syntax
     private _extensionsLoadUriAsync(context: string, property: IProperty, uri: string): Nullable<Promise<ArrayBufferView>> {
         return this._applyExtensions(property, "loadUri", (extension) => extension._loadUriAsync && extension._loadUriAsync(context, property, uri));
     }
 
-    // eslint-disable-next-line no-restricted-syntax
     private _extensionsLoadBufferViewAsync(context: string, bufferView: IBufferView): Nullable<Promise<ArrayBufferView>> {
         return this._applyExtensions(bufferView, "loadBufferView", (extension) => extension.loadBufferViewAsync && extension.loadBufferViewAsync(context, bufferView));
     }
 
-    // eslint-disable-next-line no-restricted-syntax
     private _extensionsLoadBufferAsync(context: string, buffer: IBuffer, byteOffset: number, byteLength: number): Nullable<Promise<ArrayBufferView>> {
         return this._applyExtensions(buffer, "loadBuffer", (extension) => extension.loadBufferAsync && extension.loadBufferAsync(context, buffer, byteOffset, byteLength));
     }
@@ -3041,7 +3126,7 @@ export class GLTFLoader implements IGLTFLoader {
      * @param actionAsync The action to run
      * @returns The promise returned by actionAsync or null if the extension does not exist
      */
-    // eslint-disable-next-line no-restricted-syntax, @typescript-eslint/naming-convention
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     public static LoadExtensionAsync<TExtension = unknown, TResult = void>(
         context: string,
         property: IProperty,
@@ -3070,7 +3155,7 @@ export class GLTFLoader implements IGLTFLoader {
      * @param actionAsync The action to run
      * @returns The promise returned by actionAsync or null if the extra does not exist
      */
-    // eslint-disable-next-line no-restricted-syntax, @typescript-eslint/naming-convention
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     public static LoadExtraAsync<TExtra = unknown, TResult = void>(
         context: string,
         property: IProperty,

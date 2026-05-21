@@ -1,5 +1,6 @@
 dist
 tmp
+.tmp*
 temp
 .temp
 .tempChromeCanaryProfileForDebug
@@ -22,7 +23,6 @@ shaders/**/*.ts
 **/[Ss]haders/**/*.ts
 **/[Ss]hadersInclude/**/*.ts
 **/[Ss]hadersWGSL/**/*.ts
-jest-screenshot-report/
 junit.xml
 .env
 *.pem
@@ -34,8 +34,12 @@ packages/tools/playground/public/temp
 test-results
 playwright-report
 playwright/.cache/
+.playwright
+.playwright-cli
 .nx
 .DS_Store
+.eslintcache
+log/*
 
 # generated Smart Filter block TS files
 **/*.block.ts
@@ -47,3 +51,10 @@ packages/public/@babylonjs/smart-filters-blocks/src
 # Smart Filters Editor files
 packages/tools/smartFiltersEditor/www/scripts/**
 packages/tools/smartFiltersEditor/www/index.html
+
+# Tree-shaking test temp dirs
+.tmp-treeshake
+
+# Sonda bundle analysis reports
+.sonda/
+docs/tree-shaking/

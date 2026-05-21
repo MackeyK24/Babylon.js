@@ -1,8 +1,7 @@
-import type { FrameGraphTextureHandle, FrameGraphTextureManager, IMultiRenderTargetOptions, RenderTargetWrapper } from "core/index";
+import { type FrameGraphTextureHandle, type FrameGraphTextureManager, type IMultiRenderTargetOptions, type RenderTargetWrapper } from "core/index";
 
 /**
  * @internal
- * @experimental
  */
 export class FrameGraphRenderTarget {
     protected readonly _textureManager: FrameGraphTextureManager;

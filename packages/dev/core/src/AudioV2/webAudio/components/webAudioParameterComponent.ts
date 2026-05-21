@@ -1,9 +1,8 @@
 import { Logger } from "../../../Misc/logger";
-import type { Nullable } from "../../../types";
-import type { IAudioParameterRampOptions } from "../../audioParameter";
-import { AudioParameterRampShape } from "../../audioParameter";
+import { type Nullable } from "../../../types";
+import { type IAudioParameterRampOptions, AudioParameterRampShape } from "../../audioParameter";
 import { _GetAudioParamCurveValues } from "../../audioUtils";
-import type { _WebAudioEngine } from "../webAudioEngine";
+import { type _WebAudioEngine } from "../webAudioEngine";
 
 /**
  * Minimum duration in seconds for a ramp to be considered valid.
@@ -12,6 +11,8 @@ import type { _WebAudioEngine } from "../webAudioEngine";
  * there is no perceptual difference for such short durations, so a ramp is not needed.
  */
 const MinRampDuration = 0.000001;
+
+let Warn = true;
 
 /** @internal */
 export class _WebAudioParameterComponent {
@@ -87,9 +88,10 @@ export class _WebAudioParameterComponent {
             this._param.setValueCurveAtTime(_GetAudioParamCurveValues(shape, Number.isFinite(this._param.value) ? this._param.value : 0, value), startTime, duration);
             this._rampEndTime = startTime + duration;
         } catch (e) {
-            Logger.Warn(`Audio parameter ramping failed. Setting value without ramping: ${(e as Error).message}`);
-            this._param.value = value;
-            this._rampEndTime = startTime;
+            if (Warn) {
+                Logger.Warn(`Audio parameter ramping failed: ${(e as Error).message}`);
+                Warn = false;
+            }
         }
     }
 }

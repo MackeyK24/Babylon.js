@@ -1,8 +1,9 @@
-import type { ServiceDefinition } from "../../../modularity/serviceDefinition";
-import type { ISelectionService } from "../../selectionService";
-import type { IPropertiesService } from "./propertiesService";
+import { type ServiceDefinition } from "shared-ui-components/modularTool/modularity/serviceDefinition";
+import { type ISelectionService, SelectionServiceIdentity } from "../../selectionService";
+import { type IPropertiesService, PropertiesServiceIdentity } from "./propertiesService";
 
 import { AbstractMesh } from "core/Meshes/abstractMesh";
+import { GaussianSplattingMesh } from "core/Meshes/GaussianSplatting/gaussianSplattingMesh";
 import { Mesh } from "core/Meshes/mesh";
 import { Node } from "core/node";
 import {
@@ -14,12 +15,9 @@ import {
     AbstractMeshOcclusionsProperties,
     AbstractMeshOutlineOverlayProperties,
 } from "../../../components/properties/nodes/abstractMeshProperties";
-import { MeshDisplayProperties } from "../../../components/properties/nodes/meshProperties";
 import { GaussianSplattingDisplayProperties } from "../../../components/properties/nodes/gaussianSplattingProperties";
+import { MeshDisplayProperties, MeshGeneralProperties, MeshMorphTargetsProperties } from "../../../components/properties/nodes/meshProperties";
 import { NodeGeneralProperties } from "../../../components/properties/nodes/nodeProperties";
-import { SelectionServiceIdentity } from "../../selectionService";
-import { PropertiesServiceIdentity } from "./propertiesService";
-import { GaussianSplattingMesh } from "core/Meshes/GaussianSplatting/gaussianSplattingMesh";
 
 export const NodePropertiesServiceDefinition: ServiceDefinition<[], [IPropertiesService, ISelectionService]> = {
     friendlyName: "Mesh Properties",
@@ -77,8 +75,16 @@ export const NodePropertiesServiceDefinition: ServiceDefinition<[], [IProperties
             predicate: (entity: unknown): entity is Mesh => entity instanceof Mesh && entity.getTotalVertices() > 0,
             content: [
                 {
+                    section: "General",
+                    component: ({ context }) => <MeshGeneralProperties mesh={context} />,
+                },
+                {
                     section: "Display",
                     component: ({ context }) => <MeshDisplayProperties mesh={context} />,
+                },
+                {
+                    section: "Morph Targets",
+                    component: ({ context }) => <MeshMorphTargetsProperties mesh={context} />,
                 },
             ],
         });

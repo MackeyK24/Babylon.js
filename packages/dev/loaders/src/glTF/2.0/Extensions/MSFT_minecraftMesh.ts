@@ -1,8 +1,8 @@
-import type { Nullable } from "core/types";
-import type { Material } from "core/Materials/material";
-import type { PBRMaterial } from "core/Materials/PBR/pbrMaterial";
-import type { IMaterial } from "../glTFLoaderInterfaces";
-import type { IGLTFLoaderExtension } from "../glTFLoaderExtension";
+import { type Nullable } from "core/types";
+import { type Material } from "core/Materials/material";
+import { type PBRMaterial } from "core/Materials/PBR/pbrMaterial";
+import { type IMaterial } from "../glTFLoaderInterfaces";
+import { type IGLTFLoaderExtension } from "../glTFLoaderExtension";
 import { GLTFLoader } from "../glTFLoader";
 import { registerGLTFExtension, unregisterGLTFExtension } from "../glTFLoaderExtensionRegistry";
 
@@ -46,7 +46,8 @@ export class MSFT_minecraftMesh implements IGLTFLoaderExtension {
     public loadMaterialPropertiesAsync(context: string, material: IMaterial, babylonMaterial: Material): Nullable<Promise<void>> {
         return GLTFLoader.LoadExtraAsync<boolean>(context, material, this.name, async (extraContext, extra) => {
             if (extra) {
-                if (!this._loader._pbrMaterialImpl) {
+                const impl = this._loader._pbrMaterialImpls.get("pbr");
+                if (!impl) {
                     throw new Error(`${extraContext}: Material type not supported`);
                 }
 

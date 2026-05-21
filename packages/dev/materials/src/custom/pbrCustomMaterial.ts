@@ -1,16 +1,16 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import type { Texture } from "core/Materials/Textures/texture";
+import { type Texture } from "core/Materials/Textures/texture";
 import { Effect } from "core/Materials/effect";
-import type { MaterialDefines } from "core/Materials/materialDefines";
+import { type MaterialDefines } from "core/Materials/materialDefines";
 import { PBRMaterial } from "core/Materials/PBR/pbrMaterial";
-import type { Mesh } from "core/Meshes/mesh";
-import type { Scene } from "core/scene";
+import { type Mesh } from "core/Meshes/mesh";
+import { type Scene } from "core/scene";
 import { RegisterClass } from "core/Misc/typeStore";
 import { ShaderCodeInliner } from "core/Engines/Processors/shaderCodeInliner";
-import type { ICustomShaderNameResolveOptions } from "core/Materials/material";
+import { type ICustomShaderNameResolveOptions } from "core/Materials/material";
 import { Color3, Color4 } from "core/Maths/math.color";
-import type { Nullable } from "core/types";
-import type { SubMesh } from "core/Meshes/subMesh";
+import { type Nullable } from "core/types";
+import { type SubMesh } from "core/Meshes/subMesh";
 
 import "core/Shaders/pbr.vertex";
 import "core/Shaders/pbr.fragment";
@@ -143,6 +143,8 @@ export class PBRCustomMaterial extends PBRMaterial {
      * List of the custom attributes
      */
     _customAttributes: string[];
+
+    private readonly _customEffects = new Set<Effect>();
 
     /**
      * Fragment shader string
@@ -323,6 +325,40 @@ export class PBRCustomMaterial extends PBRMaterial {
 
         PBRCustomMaterial.ShaderIndexer++;
         this._createdShaderName = "custompbr_" + PBRCustomMaterial.ShaderIndexer;
+
+        this.onEffectCreatedObservable.add(({ effect, subMesh }) => {
+            const previousEffect = subMesh?.effect;
+            if (this._isCreatedShaderEffect(effect)) {
+                this._customEffects.add(effect);
+            }
+            if ((!this.allowShaderHotSwapping || effect.isReady()) && previousEffect && previousEffect !== effect && this._isCreatedShaderEffect(previousEffect)) {
+                previousEffect.dispose();
+                if (previousEffect.isDisposed) {
+                    this._customEffects.delete(previousEffect);
+                }
+            }
+        });
+    }
+
+    private _isCreatedShaderEffect(effect: Effect): boolean {
+        return effect._key.startsWith(this._createdShaderName + "+");
+    }
+
+    /**
+     * Disposes the material
+     * @param forceDisposeEffect specifies if effects should be forcefully disposed
+     * @param forceDisposeTextures specifies if textures should be forcefully disposed
+     */
+    public override dispose(forceDisposeEffect?: boolean, forceDisposeTextures?: boolean): void {
+        delete Effect.ShadersStore[this._createdShaderName + "VertexShader"];
+        delete Effect.ShadersStore[this._createdShaderName + "PixelShader"];
+
+        super.dispose(forceDisposeEffect, forceDisposeTextures);
+
+        this._customEffects.forEach((effect) => {
+            effect.dispose(true);
+        });
+        this._customEffects.clear();
     }
 
     protected override _afterBind(mesh?: Mesh, effect: Nullable<Effect> = null, subMesh?: SubMesh): void {

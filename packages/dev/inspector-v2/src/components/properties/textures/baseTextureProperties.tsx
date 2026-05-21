@@ -1,11 +1,11 @@
-import type { ComponentType, FunctionComponent } from "react";
+import { type ComponentType, type FunctionComponent, useRef } from "react";
 
-import type { BaseTexture } from "core/index";
-import type { DropdownOption } from "shared-ui-components/fluent/primitives/dropdown";
-import type { TextureEditorProps } from "../../textureEditor/textureEditor";
-import type { TexturePreviewImperativeRef } from "./texturePreview";
+import { type BaseTexture } from "core/index";
+import { type DropdownOption } from "shared-ui-components/fluent/primitives/dropdown";
+import { type TextureEditorProps } from "../../textureEditor/textureEditor";
+import { type TexturePreviewImperativeRef, TexturePreview } from "./texturePreview";
 
-import { useRef } from "react";
+import { EditRegular } from "@fluentui/react-icons";
 
 import { Constants } from "core/Engines/constants";
 import { Texture } from "core/Materials/Textures/texture";
@@ -22,7 +22,6 @@ import { TextureUpload } from "shared-ui-components/fluent/hoc/textureUpload";
 import { useProperty } from "../../../hooks/compoundPropertyHooks";
 import { BoundProperty } from "../boundProperty";
 import { FindTextureFormat, FindTextureType } from "./textureFormatUtils";
-import { TexturePreview } from "./texturePreview";
 
 export const BaseTexturePreviewProperties: FunctionComponent<{ texture: BaseTexture; textureEditor: ComponentType<TextureEditorProps> }> = (props) => {
     // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -36,7 +35,7 @@ export const BaseTexturePreviewProperties: FunctionComponent<{ texture: BaseText
         <>
             <TexturePreview imperativeRef={texturePreviewImperativeRef} texture={texture} />
             <TextureUpload texture={texture} />
-            <ButtonLine label="Edit Texture" onClick={() => childWindow.current?.open()} />
+            <ButtonLine label="Edit Texture" onClick={() => childWindow.current?.open()} icon={EditRegular} />
             <ChildWindow id="Texture Editor" imperativeRef={childWindow}>
                 <TextureEditor texture={texture} onUpdate={async () => await texturePreviewImperativeRef.current?.refresh()} />
             </ChildWindow>

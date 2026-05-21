@@ -1,6 +1,11 @@
 // AlphaG epsilon to avoid numerical issues
 #define MINIMUMVARIANCE 0.0005
 
+#ifndef TEXRD_DEFINED
+    #define TEXRD(s, uv) texture2D(s, uv)
+    #define TEXRD_DEFINED
+#endif
+
 float convertRoughnessToAverageSlope(float roughness)
 {
     // Calculate AlphaG as square of roughness (add epsilon to avoid numerical issues)
@@ -62,7 +67,7 @@ vec2 getAARoughnessFactors(vec3 normalVector) {
     #elif ANISOTROPIC_OPENPBR
         // Aniso parameter remapping OpenPBR
         vec2 getAnisotropicRoughness(float alphaG, float anisotropy) {
-            float alphaT = alphaG * sqrt(2.0 / (1.0 + (1.0 - anisotropy) * (1.0 - anisotropy)));
+            float alphaT = max(alphaG * alphaG * sqrt(2.0 / (1.0 + (1.0 - anisotropy) * (1.0 - anisotropy))), MINIMUMVARIANCE);
             float alphaB = max(alphaT * (1.0 - anisotropy), MINIMUMVARIANCE);
             return vec2(alphaT, alphaB);
         }

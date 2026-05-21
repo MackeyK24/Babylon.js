@@ -1,15 +1,13 @@
-import type { Scene } from "core/index";
+import { type Scene } from "core/index";
 
-import type { FunctionComponent } from "react";
-
-import { useCallback } from "react";
+import { type FunctionComponent, useCallback } from "react";
 
 import { EngineInstrumentation } from "core/Instrumentation/engineInstrumentation";
 import { SceneInstrumentation } from "core/Instrumentation/sceneInstrumentation";
 
-import { useObservableState } from "../../hooks/observableHooks";
+import { useObservableState } from "shared-ui-components/modularTool/hooks/observableHooks";
 import { usePollingObservable } from "../../hooks/pollingHooks";
-import { useResource } from "../../hooks/resourceHooks";
+import { useResource } from "shared-ui-components/modularTool/hooks/resourceHooks";
 
 // TODO: Dynamically import the right engine.query module based on the type of engine?
 import "core/Engines/AbstractEngine/abstractEngine.timeQuery";
@@ -64,6 +62,8 @@ export const FrameStepsStats: FunctionComponent<{ context: Scene }> = ({ context
             <StringifiedPropertyLine key="Sprites" label="Sprites" value={sprites} precision={2} units="ms" />
             <StringifiedPropertyLine key="Animations" label="Animations" value={animations} precision={2} units="ms" />
             <StringifiedPropertyLine key="Physics" label="Physics" value={physics} precision={2} units="ms" />
+            <StringifiedPropertyLine key="Render" label="Render" value={sceneInstrumentation.renderTimeCounter.lastSecAverage} precision={2} units="ms" />
+            <StringifiedPropertyLine key="Frame" label="Frame" value={sceneInstrumentation.frameTimeCounter.lastSecAverage} precision={2} units="ms" />
             <StringifiedPropertyLine key="InterFrameTime" label="Inter-Frame Time" value={interFrameTime} precision={2} units="ms" />
             <StringifiedPropertyLine key="GPUFrameTime" label="GPU Frame Time" value={gpuFrameTime} precision={2} units="ms" />
             <StringifiedPropertyLine key="GPUFrameTimeAverage" label="GPU Frame Time (Average)" value={gpuFrameTimeAverage} precision={2} units="ms" />

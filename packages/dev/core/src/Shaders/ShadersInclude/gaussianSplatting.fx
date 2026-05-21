@@ -12,7 +12,7 @@ vec2 getDataUV(float index, vec2 textureSize) {
     return vec2((x + 0.5) / textureSize.x, (y + 0.5) / textureSize.y);
 }
 
-#if SH_DEGREE > 0
+#if SH_DEGREE > 0 || IS_COMPOUND
 ivec2 getDataUVint(float index, vec2 textureSize) {
     float y = floor(index / textureSize.x);
     float x = index - y * textureSize.x;
@@ -33,6 +33,18 @@ struct Splat {
 #endif
 #if SH_DEGREE > 2
     uvec4 sh2;
+#endif
+#if SH_DEGREE > 3
+    uvec4 sh3;
+    uvec4 sh4;
+#endif
+#if IS_COMPOUND
+    uint partIndex;
+#endif
+#if defined(IS_FOR_VOXELIZATION)
+    vec4 rotationA;
+    vec4 rotationB;
+    vec4 rotationScale;
 #endif
 };
 
@@ -70,10 +82,14 @@ Splat readSplat(float splatIndex)
     vec2 splatUV = getDataUV(splatIndex, dataTextureSize);
     splat.center = texture2D(centersTexture, splatUV);
     splat.color = texture2D(colorsTexture, splatUV);
+#if !defined(IS_FOR_VOXELIZATION)
     splat.covA = texture2D(covariancesATexture, splatUV) * splat.center.w;
     splat.covB = texture2D(covariancesBTexture, splatUV) * splat.center.w;
-#if SH_DEGREE > 0
+#endif
+#if SH_DEGREE > 0 || IS_COMPOUND
     ivec2 splatUVint = getDataUVint(splatIndex, dataTextureSize);
+#endif
+#if SH_DEGREE > 0
     splat.sh0 = texelFetch(shTexture0, splatUVint, 0);
 #endif
 #if SH_DEGREE > 1
@@ -82,14 +98,25 @@ Splat readSplat(float splatIndex)
 #if SH_DEGREE > 2
     splat.sh2 = texelFetch(shTexture2, splatUVint, 0);
 #endif
-
+#if SH_DEGREE > 3
+    splat.sh3 = texelFetch(shTexture3, splatUVint, 0);
+    splat.sh4 = texelFetch(shTexture4, splatUVint, 0);
+#endif
+#if IS_COMPOUND
+    splat.partIndex = uint(texture2D(partIndicesTexture, splatUV).r * 255.0 + 0.5);
+#endif
+#if defined(IS_FOR_VOXELIZATION)
+    splat.rotationA = texture2D(rotationsATexture, splatUV);
+    splat.rotationB = texture2D(rotationsBTexture, splatUV);
+    splat.rotationScale = texture2D(rotationScaleTexture, splatUV);
+#endif
     return splat;
 }
     
 #if defined(WEBGL2) || defined(WEBGPU) || defined(NATIVE)
 // no SH for GS and WebGL1
 // dir = normalized(splat pos - cam pos)
-vec3 computeColorFromSHDegree(vec3 dir, const vec3 sh[16])
+vec3 computeColorFromSHDegree(vec3 dir, const vec3 sh[25], float _so1, float _so2, float _so3, float _so4)
 {
     const float SH_C0 = 0.28209479;
     const float SH_C1 = 0.48860251;
@@ -99,7 +126,7 @@ vec3 computeColorFromSHDegree(vec3 dir, const vec3 sh[16])
     SH_C2[2] = 0.315391565;
     SH_C2[3] = -1.09254843;
     SH_C2[4] = 0.546274215;
-    
+
     float SH_C3[7];
     SH_C3[0] = -0.59004358;
     SH_C3[1] = 2.890611442;
@@ -109,33 +136,57 @@ vec3 computeColorFromSHDegree(vec3 dir, const vec3 sh[16])
     SH_C3[5] = 1.445305721;
     SH_C3[6] = -0.59004358;
 
+    float SH_C4[9];
+    SH_C4[0] =  2.5033429418;
+    SH_C4[1] = -1.7701307698;
+    SH_C4[2] =  0.9461746958;
+    SH_C4[3] = -0.6690465436;
+    SH_C4[4] =  0.1057855469;
+    SH_C4[5] = -0.6690465436;
+    SH_C4[6] =  0.4730873479;
+    SH_C4[7] = -1.7701307698;
+    SH_C4[8] =  0.6258357354;
+
 	vec3 result = /*SH_C0 * */sh[0];
 
 #if SH_DEGREE > 0
     float x = dir.x;
     float y = dir.y;
     float z = dir.z;
-    result += - SH_C1 * y * sh[1] + SH_C1 * z * sh[2] - SH_C1 * x * sh[3];
+    result += _so1 * (- SH_C1 * y * sh[1] + SH_C1 * z * sh[2] - SH_C1 * x * sh[3]);
 
 #if SH_DEGREE > 1
     float xx = x * x, yy = y * y, zz = z * z;
     float xy = x * y, yz = y * z, xz = x * z;
-    result += 
+    result += _so2 * (
         SH_C2[0] * xy * sh[4] +
         SH_C2[1] * yz * sh[5] +
         SH_C2[2] * (2.0 * zz - xx - yy) * sh[6] +
         SH_C2[3] * xz * sh[7] +
-        SH_C2[4] * (xx - yy) * sh[8];
+        SH_C2[4] * (xx - yy) * sh[8]);
 
 #if SH_DEGREE > 2
-    result += 
+    result += _so3 * (
         SH_C3[0] * y * (3.0 * xx - yy) * sh[9] +
         SH_C3[1] * xy * z * sh[10] +
         SH_C3[2] * y * (4.0 * zz - xx - yy) * sh[11] +
         SH_C3[3] * z * (2.0 * zz - 3.0 * xx - 3.0 * yy) * sh[12] +
         SH_C3[4] * x * (4.0 * zz - xx - yy) * sh[13] +
         SH_C3[5] * z * (xx - yy) * sh[14] +
-        SH_C3[6] * x * (xx - 3.0 * yy) * sh[15];
+        SH_C3[6] * x * (xx - 3.0 * yy) * sh[15]);
+
+#if SH_DEGREE > 3
+    result += _so4 * (
+        SH_C4[0] * x * y * (xx - yy) * sh[16] +
+        SH_C4[1] * y * z * (3.0 * xx - yy) * sh[17] +
+        SH_C4[2] * x * y * (7.0 * zz - 1.0) * sh[18] +
+        SH_C4[3] * y * z * (7.0 * zz - 3.0) * sh[19] +
+        SH_C4[4] * (zz * (35.0 * zz - 30.0) + 3.0) * sh[20] +
+        SH_C4[5] * x * z * (7.0 * zz - 3.0) * sh[21] +
+        SH_C4[6] * (xx - yy) * (7.0 * zz - 1.0) * sh[22] +
+        SH_C4[7] * x * z * (xx - 3.0 * yy) * sh[23] +
+        SH_C4[8] * (xx * (xx - 3.0 * yy) - yy * (3.0 * xx - yy)) * sh[24]);
+#endif
 #endif
 #endif
 #endif
@@ -154,10 +205,10 @@ vec4 decompose(uint value)
     return components * vec4(2./255.) - vec4(1.);
 }
 
-vec3 computeSH(Splat splat, vec3 dir)
+vec3 computeSHWeighted(Splat splat, vec3 dir, float _so1, float _so2, float _so3, float _so4)
 {
-    vec3 sh[16];
-    
+    vec3 sh[25];
+
     sh[0] = vec3(0.,0.,0.);
 #if SH_DEGREE > 0
     vec4 sh00 = decompose(splat.sh0.x);
@@ -193,10 +244,53 @@ vec3 computeSH(Splat splat, vec3 dir)
     sh[12] = vec3(sh08.y, sh08.z, sh08.w);
     sh[13] = vec3(sh09.x, sh09.y, sh09.z);
     sh[14] = vec3(sh09.w, sh10.x, sh10.y);
-    sh[15] = vec3(sh10.z, sh10.w, sh11.x);    
+    sh[15] = vec3(sh10.z, sh10.w, sh11.x);
 #endif
+#if SH_DEGREE > 3
+    // sh[16] R/G/B are in sh11.y/z/w (j=45,46,47 — last 3 bytes of texture2)
+    vec4 sh12 = decompose(splat.sh3.x);
+    vec4 sh13 = decompose(splat.sh3.y);
+    vec4 sh14 = decompose(splat.sh3.z);
+    vec4 sh15 = decompose(splat.sh3.w);
+    vec4 sh16 = decompose(splat.sh4.x);
+    vec4 sh17 = decompose(splat.sh4.y);
 
-    return computeColorFromSHDegree(dir, sh);
+    sh[16] = vec3(sh11.y, sh11.z, sh11.w);
+    sh[17] = vec3(sh12.x, sh12.y, sh12.z);
+    sh[18] = vec3(sh12.w, sh13.x, sh13.y);
+    sh[19] = vec3(sh13.z, sh13.w, sh14.x);
+    sh[20] = vec3(sh14.y, sh14.z, sh14.w);
+    sh[21] = vec3(sh15.x, sh15.y, sh15.z);
+    sh[22] = vec3(sh15.w, sh16.x, sh16.y);
+    sh[23] = vec3(sh16.z, sh16.w, sh17.x);
+    sh[24] = vec3(sh17.y, sh17.z, sh17.w);
+#endif
+    return computeColorFromSHDegree(dir, sh, _so1, _so2, _so3, _so4);
+}
+
+vec3 computeSH(Splat splat, vec3 dir)
+{
+#if !defined(GS_DBG_ENABLED) || GS_DBG_SH_ORDER1 == 1
+    float _w1 = 1.0;
+#else
+    float _w1 = 0.0;
+#endif
+#if !defined(GS_DBG_ENABLED) || GS_DBG_SH_ORDER2 == 1
+    float _w2 = 1.0;
+#else
+    float _w2 = 0.0;
+#endif
+#if !defined(GS_DBG_ENABLED) || GS_DBG_SH_ORDER3 == 1
+    float _w3 = 1.0;
+#else
+    float _w3 = 0.0;
+#endif
+#if !defined(GS_DBG_ENABLED) || GS_DBG_SH_ORDER4 == 1
+    float _w4 = 1.0;
+#else
+    float _w4 = 0.0;
+#endif
+    return computeSHWeighted(splat, dir, _w1, _w2, _w3, _w4);
 }
 #else
 vec3 computeSH(Splat splat, vec3 dir)
@@ -205,6 +299,7 @@ vec3 computeSH(Splat splat, vec3 dir)
 }
 #endif
 
+#if !defined(IS_FOR_VOXELIZATION)
 vec4 gaussianSplatting(vec2 meshPos, vec3 worldPos, vec2 scale, vec3 covA, vec3 covB, mat4 worldMatrix, mat4 viewMatrix, mat4 projectionMatrix)
 {
     mat4 modelView = viewMatrix * worldMatrix;
@@ -288,3 +383,38 @@ vec4 gaussianSplatting(vec2 meshPos, vec3 worldPos, vec2 scale, vec3 covA, vec3 
         + ((meshPos.x * majorAxis
         + meshPos.y * minorAxis) * invViewport * scaleFactor) * scale, pos2d.zw);
 }
+#endif
+
+#if IS_COMPOUND
+mat4 getPartWorld(uint partIndex) {
+    return partWorld[partIndex];
+}
+#endif
+
+#if defined(IS_FOR_VOXELIZATION)
+vec4 computeVoxelSplatWorldPos(vec4 rotationA, vec4 rotationB, vec4 rotationScale, vec3 center, mat4 splatWorld, mat4 viewMatrix, mat4 invWorldScale, vec2 quadPos) {
+    mat3 splatRotation = mat3(
+        vec3(rotationA.x, rotationA.y, rotationA.z),
+        vec3(rotationA.w, rotationB.x, rotationB.y),
+        vec3(rotationB.z, rotationB.w, rotationScale.x)
+    );
+    vec3 splatScale = vec3(rotationScale.y, rotationScale.z, rotationScale.w);
+
+    // Find the splat axis with the longest projection length in view-space Z axis, which indicates the axis
+    // is the one most aligned with the view direction.
+    mat3 rotToView = mat3(viewMatrix) * mat3(invWorldScale) * mat3(splatWorld) * splatRotation;
+    vec3 axisLengthInViewZ = abs(vec3(rotToView[0][2], rotToView[1][2], rotToView[2][2]));
+
+    float gaussianSplatCutoffStddev = 1.4142135624 / 2.0; // sqrt(2)/2
+    vec3 offsetSplatSpace;
+    if (axisLengthInViewZ.x > axisLengthInViewZ.y && axisLengthInViewZ.x > axisLengthInViewZ.z) {
+        offsetSplatSpace = vec3(0.0, quadPos.x, quadPos.y) * splatScale * gaussianSplatCutoffStddev;
+    } else if (axisLengthInViewZ.y > axisLengthInViewZ.z) {
+        offsetSplatSpace = vec3(quadPos.x, 0.0, quadPos.y) * splatScale * gaussianSplatCutoffStddev;
+    } else {
+        offsetSplatSpace = vec3(quadPos.x, quadPos.y, 0.0) * splatScale * gaussianSplatCutoffStddev;
+    }
+    vec3 vertexObjectSpace = center + splatRotation * offsetSplatSpace;
+    return splatWorld * vec4(vertexObjectSpace, 1.0);
+}
+#endif

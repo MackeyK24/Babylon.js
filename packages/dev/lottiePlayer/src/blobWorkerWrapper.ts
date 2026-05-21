@@ -1,4 +1,3 @@
-// From https://github.com/webpack/webpack/discussions/14648#discussioncomment-1589272
 /**
  * This class wraps a regular URL worker into a blob.
  * It is a common scenario to have the website served from one domain, and scripts from another one.
@@ -16,7 +15,7 @@ export class BlobWorkerWrapper {
         const workerScript = `
             const scriptUrl = new URL("${url.toString()}");
             const originalImportScripts = self.importScripts;
-            self.importScripts = (url) => originalImportScripts.call(self, new URL(url, scriptUrl).toString());
+            self.importScripts = (url) => originalImportScripts.call(self, new URL(url.split("/").pop(), scriptUrl).toString());
             importScripts(scriptUrl.toString());
         `;
         const objectURL = URL.createObjectURL(

@@ -16,40 +16,45 @@ float specular_roughness_anisotropy = 0.0;
 float specular_ior = 1.5;
 float alpha = 1.0;
 vec2 geometry_tangent = vec2(1.0, 0.0);
+float geometry_thickness = 0.0;
 
 // Sample Base Layer properties from textures
 #ifdef BASE_WEIGHT
-    vec4 baseWeightFromTexture = texture2D(baseWeightSampler, vBaseWeightUV + uvOffset);
+    vec4 baseWeightFromTexture = TEXRD(baseWeightSampler, vBaseWeightUV + uvOffset);
 #endif
 
 #ifdef BASE_COLOR
-    vec4 baseColorFromTexture = texture2D(baseColorSampler, vBaseColorUV + uvOffset);
+    vec4 baseColorFromTexture = TEXRD(baseColorSampler, vBaseColorUV + uvOffset);
 #endif
 
 #ifdef BASE_METALNESS
-    vec4 metallicFromTexture = texture2D(baseMetalnessSampler, vBaseMetalnessUV + uvOffset);
+    vec4 metallicFromTexture = TEXRD(baseMetalnessSampler, vBaseMetalnessUV + uvOffset);
 #endif
 
-#if defined(ROUGHNESSSTOREINMETALMAPGREEN) && defined(BASE_METALNESS)
+#if defined(SPECULAR_ROUGHNESS_FROM_METALNESS_TEXTURE_GREEN) && defined(BASE_METALNESS)
     float roughnessFromTexture = metallicFromTexture.g;
 #elif defined(SPECULAR_ROUGHNESS)
-    float roughnessFromTexture = texture2D(specularRoughnessSampler, vSpecularRoughnessUV + uvOffset).r;
+    float roughnessFromTexture = TEXRD(specularRoughnessSampler, vSpecularRoughnessUV + uvOffset).r;
 #endif
 
 #ifdef GEOMETRY_TANGENT
-    vec3 geometryTangentFromTexture = texture2D(geometryTangentSampler, vGeometryTangentUV + uvOffset).rgb;
+    vec3 geometryTangentFromTexture = TEXRD(geometryTangentSampler, vGeometryTangentUV + uvOffset).rgb;
 #endif
 
 #ifdef SPECULAR_ROUGHNESS_ANISOTROPY
-    float anisotropyFromTexture = texture2D(specularRoughnessAnisotropySampler, vSpecularRoughnessAnisotropyUV + uvOffset).r * vSpecularRoughnessAnisotropyInfos.y;
+    float anisotropyFromTexture = TEXRD(specularRoughnessAnisotropySampler, vSpecularRoughnessAnisotropyUV + uvOffset).r * vSpecularRoughnessAnisotropyInfos.y;
 #endif
 
 #ifdef BASE_DIFFUSE_ROUGHNESS
-    float baseDiffuseRoughnessFromTexture = texture2D(baseDiffuseRoughnessSampler, vBaseDiffuseRoughnessUV + uvOffset).r;
+    float baseDiffuseRoughnessFromTexture = TEXRD(baseDiffuseRoughnessSampler, vBaseDiffuseRoughnessUV + uvOffset).r;
 #endif
 
 #ifdef GEOMETRY_OPACITY
-    vec4 opacityFromTexture = texture2D(geometryOpacitySampler, vGeometryOpacityUV + uvOffset);
+    vec4 opacityFromTexture = TEXRD(geometryOpacitySampler, vGeometryOpacityUV + uvOffset);
+#endif
+
+#ifdef GEOMETRY_THICKNESS
+    vec4 thicknessFromTexture = TEXRD(geometryThicknessSampler, vGeometryThicknessUV + uvOffset);
 #endif
 
 #ifdef DECAL
@@ -57,7 +62,7 @@ vec2 geometry_tangent = vec2(1.0, 0.0);
 #endif
 
 #ifdef SPECULAR_COLOR
-    vec4 specularColorFromTexture = texture2D(specularColorSampler, vSpecularColorUV + uvOffset);
+    vec4 specularColorFromTexture = TEXRD(specularColorSampler, vSpecularColorUV + uvOffset);
 #endif
 // If the specular weight is coming from the specular color texture's alpha channel, don't sample the
 // weight sampler to avoid redundant texture fetches.
@@ -65,14 +70,14 @@ vec2 geometry_tangent = vec2(1.0, 0.0);
     #ifdef SPECULAR_WEIGHT_IN_ALPHA
         // If loaded from a glTF, the specular_weight is stored in the alpha channel.
         // Otherwise, it's expected to just be a greyscale texture.
-        float specularWeightFromTexture = texture2D(specularWeightSampler, vSpecularWeightUV + uvOffset).a;
+        float specularWeightFromTexture = TEXRD(specularWeightSampler, vSpecularWeightUV + uvOffset).a;
     #else
-        float specularWeightFromTexture = texture2D(specularWeightSampler, vSpecularWeightUV + uvOffset).r;
+        float specularWeightFromTexture = TEXRD(specularWeightSampler, vSpecularWeightUV + uvOffset).r;
     #endif
 #endif
 
-#if defined(ANISOTROPIC) || defined(FUZZ)
-    vec3 noise = texture2D(blueNoiseSampler, gl_FragCoord.xy / 256.0).xyz;
+#if defined(ANISOTROPIC) || defined(FUZZ) || defined(REFRACTED_BACKGROUND) || defined(USE_IRRADIANCE_TEXTURE_FOR_SCATTERING)
+    vec3 noise = vec3(2.0) * TEXRD(blueNoiseSampler, gl_FragCoord.xy / 256.0).xyz - vec3(1.0);
 #endif
 
 // Initalize base layer properties from uniforms
@@ -93,6 +98,7 @@ specular_weight = vReflectanceInfo.a;
 specular_ior = vReflectanceInfo.z;
 specular_roughness_anisotropy = vSpecularAnisotropy.b;
 geometry_tangent = vSpecularAnisotropy.rg;
+geometry_thickness = vGeometryThickness;
 
 // Apply texture values to base layer properties
 #ifdef BASE_COLOR
@@ -117,6 +123,15 @@ geometry_tangent = vSpecularAnisotropy.rg;
     alpha *= vGeometryOpacityInfos.y;
 #endif
 
+#ifdef GEOMETRY_THICKNESS
+    #ifdef GEOMETRY_THICKNESS_FROM_GREEN_CHANNEL
+        geometry_thickness *= thicknessFromTexture.g;
+    #else
+        geometry_thickness *= thicknessFromTexture.r;
+    #endif
+    geometry_thickness *= vGeometryThicknessInfos.y;
+#endif
+
 #ifdef ALPHATEST
     #if DEBUGMODE != 88
         if (alpha < ALPHATESTVALUE)
@@ -130,7 +145,7 @@ geometry_tangent = vSpecularAnisotropy.rg;
 #endif
 
 #ifdef BASE_METALNESS
-    #ifdef METALLNESSSTOREINMETALMAPBLUE
+    #ifdef BASE_METALNESS_FROM_METALNESS_TEXTURE_BLUE
         base_metalness *= metallicFromTexture.b;
     #else
         base_metalness *= metallicFromTexture.r;
@@ -147,15 +162,15 @@ geometry_tangent = vSpecularAnisotropy.rg;
     #else
         specular_color *= specularColorFromTexture.rgb;
     #endif
+
+    #ifdef SPECULAR_WEIGHT_FROM_SPECULAR_COLOR_TEXTURE
+        specular_weight *= specularColorFromTexture.a;
+    #elif defined(SPECULAR_WEIGHT)
+        specular_weight *= specularWeightFromTexture;
+    #endif
 #endif
 
-#ifdef SPECULAR_WEIGHT_FROM_SPECULAR_COLOR_TEXTURE
-    specular_weight *= specularColorFromTexture.a;
-#elif defined(SPECULAR_WEIGHT)
-    specular_weight *= specularWeightFromTexture;
-#endif
-
-#if defined(SPECULAR_ROUGHNESS) || (defined(ROUGHNESSSTOREINMETALMAPGREEN) && defined(BASE_METALNESS))
+#if defined(SPECULAR_ROUGHNESS) || (defined(SPECULAR_ROUGHNESS_FROM_METALNESS_TEXTURE_GREEN) && defined(BASE_METALNESS))
     specular_roughness *= roughnessFromTexture;
 #endif
 

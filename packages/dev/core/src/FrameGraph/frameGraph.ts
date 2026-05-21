@@ -1,4 +1,13 @@
-import type { Scene, AbstractEngine, FrameGraphTask, Nullable, NodeRenderGraph, IDisposable } from "core/index";
+import {
+    type Scene,
+    type AbstractEngine,
+    type FrameGraphTask,
+    type Nullable,
+    type NodeRenderGraph,
+    type IDisposable,
+    type Camera,
+    type FrameGraphObjectRendererTask,
+} from "core/index";
 import { FrameGraphPass } from "./Passes/pass";
 import { FrameGraphRenderPass } from "./Passes/renderPass";
 import { FrameGraphObjectListPass } from "./Passes/objectListPass";
@@ -18,7 +27,6 @@ enum FrameGraphPassType {
 
 /**
  * Class used to implement a frame graph
- * @experimental
  */
 export class FrameGraph implements IDisposable {
     /**
@@ -129,6 +137,15 @@ export class FrameGraph implements IDisposable {
     }
 
     /**
+     * Gets all tasks of a specific class name(s)
+     * @param name Class name(s) of the task to get
+     * @returns The list of tasks or an empty array if none found
+     */
+    public getTasksByClassNames<T extends FrameGraphTask>(name: string | string[]): T[] {
+        return this._tasks.filter((t) => (Array.isArray(name) ? name.includes(t.getClassName()) : t.getClassName() === name)) as T[];
+    }
+
+    /**
      * Gets all tasks of a specific type
      * @param taskType Type of the task(s) to get
      * @returns The list of tasks of the specified type
@@ -155,6 +172,10 @@ export class FrameGraph implements IDisposable {
     public addTask(task: FrameGraphTask): void {
         if (this._currentProcessedTask !== null) {
             throw new Error(`FrameGraph.addTask: Can't add the task "${task.name}" while another task is currently building (task: ${this._currentProcessedTask.name}).`);
+        }
+
+        if (this._tasks.includes(task)) {
+            return;
         }
 
         this._tasks.push(task);
@@ -224,15 +245,6 @@ export class FrameGraph implements IDisposable {
     }
 
     /**
-     * @deprecated Use buildAsync instead
-     */
-    public build(): void {
-        void this.buildAsync(false);
-    }
-
-    private _built = false; // TODO: to be removed when build() is removed
-
-    /**
      * Builds the frame graph.
      * This method should be called after all tasks have been added to the frame graph (FrameGraph.addTask) and before the graph is executed (FrameGraph.execute).
      * @param waitForReadiness If true, the method will wait for the frame graph to be ready before returning (default is true)
@@ -241,7 +253,6 @@ export class FrameGraph implements IDisposable {
         this.textureManager._releaseTextures(false);
 
         this.pausedExecution = true;
-        this._built = false;
 
         try {
             await this._importPromise;
@@ -274,8 +285,6 @@ export class FrameGraph implements IDisposable {
                 task._initializePasses();
             }
 
-            this._built = true;
-
             this.onBuildObservable.notifyObservers(this);
 
             if (waitForReadiness) {
@@ -288,7 +297,6 @@ export class FrameGraph implements IDisposable {
             throw e;
         } finally {
             this.pausedExecution = false;
-            this._built = true;
         }
     }
 
@@ -315,22 +323,10 @@ export class FrameGraph implements IDisposable {
     public async whenReadyAsync(timeStep = 16, maxTimeout = 10000): Promise<void> {
         let firstNotReadyTask: FrameGraphTask | null = null;
 
-        // TODO: to be removed when build() is removed
-        await new Promise((resolve) => {
-            const checkBuilt = () => {
-                if (this._built) {
-                    resolve(void 0);
-                    return;
-                }
-                setTimeout(checkBuilt, 16);
-            };
-            checkBuilt();
-        });
-        // END TODO
-
         return await new Promise((resolve, reject) => {
             this._whenReadyAsyncCancel = _RetryWithInterval(
                 () => {
+                    firstNotReadyTask = null;
                     let ready = this._renderContext._isReady();
                     for (const task of this._tasks) {
                         const taskIsReady = task.isReady();
@@ -405,6 +401,53 @@ export class FrameGraph implements IDisposable {
         this._tasks.length = 0;
         this.textureManager._releaseTextures();
         this._currentProcessedTask = null;
+    }
+
+    /**
+     * Looks for the main camera used by the frame graph.
+     * By default, this is the camera used by the main object renderer task.
+     * If no such task, we try to find a camera in a utility layer renderer tasks.
+     * @returns The main camera used by the frame graph, or null if not found
+     */
+    public findMainCamera(): Nullable<Camera> {
+        const mainObjectRenderer = this.findMainObjectRenderer();
+        if (mainObjectRenderer) {
+            return mainObjectRenderer.camera;
+        }
+
+        // Try to find a camera in the utility layer renderer tasks
+        const tasks = this.tasks;
+
+        for (let i = tasks.length - 1; i >= 0; i--) {
+            const task = tasks[i];
+            if (task.getClassName() === "FrameGraphUtilityLayerRendererTask") {
+                return (task as unknown as { camera: Camera }).camera;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Looks for the main object renderer task in the frame graph.
+     * By default, this is the object/geometry renderer task with isMainObjectRenderer set to true.
+     * If no such task, we return the last object/geometry renderer task that has an object list with meshes (or null if none found).
+     * @returns The main object renderer of the frame graph, or null if not found
+     */
+    public findMainObjectRenderer(): Nullable<FrameGraphObjectRendererTask> {
+        const objectRenderers = this.getTasksByClassNames<FrameGraphObjectRendererTask>(["FrameGraphObjectRendererTask", "FrameGraphGeometryRendererTask"]);
+
+        let fallbackRenderer: Nullable<FrameGraphObjectRendererTask> = null;
+        for (let i = objectRenderers.length - 1; i >= 0; --i) {
+            const meshes = objectRenderers[i].objectList.meshes;
+            if (objectRenderers[i].isMainObjectRenderer) {
+                return objectRenderers[i];
+            }
+            if ((!meshes || meshes.length > 0) && !fallbackRenderer) {
+                fallbackRenderer = objectRenderers[i];
+            }
+        }
+        return fallbackRenderer;
     }
 
     /**

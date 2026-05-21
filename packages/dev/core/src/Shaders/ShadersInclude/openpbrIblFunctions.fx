@@ -48,10 +48,12 @@
 
             #ifdef REFLECTIONMAP_OPPOSITEZ
                 irradianceVector.z *= -1.0;
+                irradianceView.z *= -1.0;
             #endif
 
             #ifdef INVERTCUBICMAP
                 irradianceVector.y *= -1.0;
+                irradianceView.y *= -1.0;
             #endif
         #endif
         #ifdef USESPHERICALFROMREFLECTIONMAP
@@ -204,6 +206,8 @@
         , const vec3 viewDirectionW
         , const vec3 positionW
         , const vec3 noise
+        , bool isRefraction
+        , float ior
     #ifdef REFLECTIONMAP_3D
         , in samplerCube reflectionSampler
     #else
@@ -248,7 +252,7 @@
                 vec4(radianceAnisotropic(alphaT, alphaB, reflectionSampler,
                                      view, tangent,
                                      bitangent, normal,
-                                     vReflectionFilteringInfo, noise.xy),
+                                     vReflectionFilteringInfo, noise.xy, isRefraction, ior),
                  1.0);
         #else
             // We will sample multiple reflections using interpolated surface normals along
@@ -288,8 +292,16 @@
                     bentNormal = normalW;
                 }
                 
+                if (isRefraction) {
+                    reflectionCoords = double_refract(-viewDirectionW, bentNormal, ior);
+                } else {
+                    reflectionCoords = reflect(-viewDirectionW, bentNormal);
+                }
                 // Use this new normal to calculate a reflection vector to sample from.
-                reflectionCoords = createReflectionCoords(positionW, bentNormal);
+                reflectionCoords = vec3(reflectionMatrix * vec4(reflectionCoords, 0));
+                #ifdef REFLECTIONMAP_OPPOSITEZ
+                    reflectionCoords.z *= -1.0;
+                #endif
                 radianceSample = sampleReflectionLod(reflectionSampler, reflectionCoords, reflectionLOD);
                 #ifdef RGBDREFLECTION
                     environmentRadiance.rgb += sample_weight * fromRGBD(radianceSample);
@@ -308,15 +320,31 @@
         return environmentRadiance.rgb;
     }
 #endif
+#endif
+#if defined(ENVIRONMENTBRDF)
+    #define pbr_inline
+    float computeDielectricIblFresnel(in ReflectanceParams reflectance, in vec3 environmentBrdf)
+    {
+        float dielectricIblFresnel = getReflectanceFromBRDFLookup(vec3(reflectance.F0), vec3(reflectance.F90), environmentBrdf).r;
+        // environmentBrdf.y is E_ss (the F0-weighted hemisphere integral).
+        // Boost by the Fdez-Agüera factor so multiscattered light stays in the
+        // specular slab rather than leaking into the (potentially dark) irradiance.
+        float dielectricECF = 1.0 + reflectance.F0 * (1.0 / environmentBrdf.y - 1.0);
+        return clamp(dielectricIblFresnel * dielectricECF, 0.0, 1.0);
+    }
 
     #define pbr_inline
-    vec3 conductorIblFresnel(in ReflectanceParams reflectance, in float NdotV, in float roughness, in vec3 environmentBrdf)
+    vec3 computeConductorIblFresnel(in ReflectanceParams reflectance, in vec3 environmentBrdf)
     {
-        #if (CONDUCTOR_SPECULAR_MODEL == CONDUCTOR_SPECULAR_MODEL_OPENPBR)
-            // This is an empirical hack to modify the F0 albedo based on roughness. It's not based on any paper
-            // or anything. Just trying to match results of rough metals in a pathtracer.
-            vec3 albedoF0 = mix(reflectance.coloredF0, pow(reflectance.coloredF0, vec3(1.4)), roughness);
-            return getF82Specular(NdotV, albedoF0, reflectance.coloredF90, roughness);
+        #if (CONDUCTOR_SPECULAR_MODEL == CONDUCTOR_SPECULAR_MODEL_OPENPBR) && defined(ENVIRONMENTBRDF)
+            // environmentBrdf comes from the OpenPBR BRDF LUT (replaces the standard LUT for this material).
+            // The z channel was stored * BRDF_Z_SCALE to use the full 8-bit range — undo that here.
+            vec3 openPBRBrdf = vec3(environmentBrdf.xy, environmentBrdf.z / BRDF_Z_SCALE);
+            vec3 b     = getF82B(reflectance.coloredF0, reflectance.coloredF90);
+            vec3 E_F82 = getF82DirectionalAlbedo(reflectance.coloredF0, vec3(1.0), b, openPBRBrdf);
+            vec3 F_avg = getF82AverageFresnel(reflectance.coloredF0, b);
+            vec3 ECF   = vec3(1.0) + F_avg * (vec3(1.0) / openPBRBrdf.y - vec3(1.0));
+            return clamp(E_F82 * ECF, vec3(0.0), vec3(1.0));
         #else
             return getReflectanceFromBRDFLookup(reflectance.coloredF0, reflectance.coloredF90, environmentBrdf);
         #endif

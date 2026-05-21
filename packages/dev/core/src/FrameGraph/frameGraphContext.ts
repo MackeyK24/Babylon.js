@@ -1,4 +1,4 @@
-import type { AbstractEngine, FrameGraphTextureManager, Scene, FrameGraphTextureHandle, Nullable, InternalTexture, IViewportLike } from "core/index";
+import { type AbstractEngine, type FrameGraphTextureManager, type Scene, type FrameGraphTextureHandle, type Nullable, type InternalTexture, type IViewportLike } from "core/index";
 
 /**
  * Base class for frame graph context.
@@ -39,7 +39,7 @@ export class FrameGraphContext {
 
         if (this._engine._currentRenderTarget !== currentRenderTarget) {
             if (!currentRenderTarget) {
-                this._engine.restoreDefaultFramebuffer();
+                this._engine.restoreDefaultFramebuffer(true);
             } else {
                 this._engine.bindFramebuffer(currentRenderTarget);
             }
@@ -61,14 +61,14 @@ export class FrameGraphContext {
      * @param name The name of the debug group
      */
     public pushDebugGroup(name: string) {
-        this.enableDebugMarkers && this._engine._debugPushGroup(name);
+        this.enableDebugMarkers && this._engine._debugPushGroup?.(name);
     }
 
     /**
      * Pops a debug group from the engine's debug stack.
      */
     public popDebugGroup() {
-        this.enableDebugMarkers && this._engine._debugPopGroup();
+        this.enableDebugMarkers && this._engine._debugPopGroup?.();
     }
 
     /**
@@ -76,7 +76,7 @@ export class FrameGraphContext {
      * @param text The text of the debug marker
      */
     public insertDebugMarker(text: string) {
-        this.enableDebugMarkers && this._engine._debugInsertMarker(text);
+        this.enableDebugMarkers && this._engine._debugInsertMarker?.(text);
     }
 
     /**
@@ -112,6 +112,6 @@ export class FrameGraphContext {
      * @param requiredHeight defines the height required for rendering. If not provided the height of the render texture is used.
      */
     public setViewport(viewport: IViewportLike, requiredWidth?: number, requiredHeight?: number): void {
-        this._engine.setViewport(viewport, requiredHeight, requiredWidth);
+        this._engine.setViewport(viewport, requiredWidth, requiredHeight);
     }
 }

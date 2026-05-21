@@ -1,14 +1,13 @@
-import type { FunctionComponent, KeyboardEvent, ChangeEvent } from "react";
-import { useContext, useEffect, useRef, useState } from "react";
-import type { InputOnChangeData } from "@fluentui/react-components";
-import { Input as FluentInput, mergeClasses, useId } from "@fluentui/react-components";
-import type { PrimitiveProps } from "./primitive";
+import { type FunctionComponent, type KeyboardEvent, type ChangeEvent, type FocusEvent, useContext, useEffect, useRef, useState } from "react";
+import { type InputOnChangeData, Input as FluentInput, mergeClasses, useId } from "@fluentui/react-components";
+import { type PrimitiveProps } from "./primitive";
 import { InfoLabel } from "./infoLabel";
-import { HandleOnBlur, HandleKeyDown, useInputStyles } from "./utils";
+import { HandleKeyDown, HandleOnBlur, useInputStyles } from "./utils";
 import { ToolContext } from "../hoc/fluentToolWrapper";
 
 export type TextInputProps = PrimitiveProps<string> & {
     validator?: (value: string) => boolean;
+    validateOnlyOnBlur?: boolean;
 };
 
 export const TextInput: FunctionComponent<TextInputProps> = (props) => {
@@ -25,8 +24,10 @@ export const TextInput: FunctionComponent<TextInputProps> = (props) => {
     }, [props.value]);
 
     const validateValue = (val: string): boolean => {
-        const failsValidator = props.validator && !props.validator(val);
-        return !failsValidator;
+        if (!props.validator) {
+            return true;
+        }
+        return props.validator(val);
     };
 
     const tryCommitValue = (currVal: string) => {
@@ -40,19 +41,37 @@ export const TextInput: FunctionComponent<TextInputProps> = (props) => {
     const handleChange = (event: ChangeEvent<HTMLInputElement>, data: InputOnChangeData) => {
         event.stopPropagation();
         setValue(data.value);
-        tryCommitValue(data.value);
+        if (!props.validateOnlyOnBlur) {
+            tryCommitValue(data.value);
+        }
     };
 
     const handleKeyUp = (event: KeyboardEvent<HTMLInputElement>) => {
         event.stopPropagation();
-        setValue(event.currentTarget.value);
-        tryCommitValue(event.currentTarget.value);
+        if (!props.validateOnlyOnBlur) {
+            tryCommitValue(event.currentTarget.value);
+        }
     };
-    const mergedClassName = mergeClasses(classes.input, !validateValue(value) ? classes.invalid : "", props.className);
+    const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+        HandleKeyDown(event);
+        // When validateOnlyOnBlur is set, also commit on Enter for better UX
+        if (event.key === "Enter" && props.validateOnlyOnBlur) {
+            tryCommitValue(event.currentTarget.value);
+        }
+    };
+
+    const handleBlur = (event: FocusEvent<HTMLInputElement>) => {
+        HandleOnBlur(event);
+        if (props.validateOnlyOnBlur) {
+            tryCommitValue(event.currentTarget.value);
+        }
+    };
+
+    const mergedClassName = mergeClasses(classes.inputFill, !validateValue(value) ? classes.invalid : "");
 
     const id = useId("input-button");
     return (
-        <div className={classes.container}>
+        <div className={mergeClasses(classes.container, props.className)}>
             {props.infoLabel && <InfoLabel {...props.infoLabel} htmlFor={id} />}
             <FluentInput
                 {...props}
@@ -62,8 +81,8 @@ export const TextInput: FunctionComponent<TextInputProps> = (props) => {
                 value={value}
                 onChange={handleChange}
                 onKeyUp={handleKeyUp}
-                onKeyDown={HandleKeyDown}
-                onBlur={HandleOnBlur}
+                onKeyDown={handleKeyDown}
+                onBlur={handleBlur}
                 className={mergedClassName}
             />
         </div>
